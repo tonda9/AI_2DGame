@@ -62,6 +62,19 @@ function drawCollectible(ctx, collectible) {
   drawPixelRect(ctx, collectible.x + 2, collectible.y + 2, 8, 8, '#ffd24f');
 }
 
+function drawBoostPad(ctx, mapElement, frameCount) {
+  const pulse = Math.floor(frameCount / 8) % 2;
+  drawPixelRect(ctx, mapElement.x, mapElement.y, mapElement.width, mapElement.height, '#505860');
+  drawPixelRect(ctx, mapElement.x + 2, mapElement.y + 2, mapElement.width - 4, mapElement.height - 4, '#7bf6ff');
+  if (pulse) {
+    drawPixelRect(ctx, mapElement.x + 4, mapElement.y - 2, mapElement.width - 8, 2, '#d9ffff');
+  }
+}
+
+function drawMapElement(ctx, mapElement, frameCount) {
+  if (mapElement.type === 'boostPad') drawBoostPad(ctx, mapElement, frameCount);
+}
+
 function drawStartMarker(ctx, start) {
   drawPixelRect(ctx, start.x - 6, start.y + 20, 12, 12, '#7b4f31');
   drawPixelRect(ctx, start.x - 2, start.y - 14, 4, 34, '#f5f7f9');
@@ -135,6 +148,7 @@ export function renderScene(ctx, canvas, state) {
   for (const collectible of state.collectibles) {
     if (!collectible.collected) drawCollectible(ctx, collectible);
   }
+  for (const mapElement of state.mapElements) drawMapElement(ctx, mapElement, state.frameCount);
   drawDashTrail(ctx, state);
   drawPlayer(ctx, state);
 

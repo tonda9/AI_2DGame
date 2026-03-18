@@ -73,6 +73,20 @@ function isOnGround() {
   });
 }
 
+function applyMapElementInteractions(previousY) {
+  for (const mapElement of level.mapElements) {
+    if (mapElement.type !== 'boostPad') continue;
+    const wasAbove = previousY + player.height <= mapElement.y + 2;
+    const nowTouching = player.y + player.height >= mapElement.y;
+    if (wasAbove && nowTouching && overlapsX(player, mapElement)) {
+      player.y = mapElement.y - player.height;
+      player.vy = mapElement.forceY;
+      player.vx += mapElement.forceX || 0;
+      break;
+    }
+  }
+}
+
 function update() {
   frameCount += 1;
   const holdLeft = input.isDown('left');
@@ -115,6 +129,7 @@ function update() {
 
   const landed = resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
+  applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
   if (grounded && Math.abs(player.vx) > 0) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
@@ -144,6 +159,7 @@ function draw() {
     platforms: level.platforms,
     obstacles: level.obstacles,
     collectibles: level.collectibles,
+    mapElements: level.mapElements,
     start: level.start,
     end: level.end,
     levelId: level.id,
