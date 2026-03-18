@@ -45,7 +45,11 @@ function resolveVerticalCollisions(previousY) {
 
 function isOnGround() {
   const probe = { ...player, y: player.y + 1 };
-  return platforms.some((platform) => overlapsX(probe, platform) && probe.y + probe.height >= platform.y && player.y + player.height <= platform.y + 1);
+  return platforms.some((platform) => {
+    const touchingTop = probe.y + probe.height >= platform.y;
+    const currentlyAboveTop = player.y + player.height <= platform.y + 1;
+    return overlapsX(probe, platform) && touchingTop && currentlyAboveTop;
+  });
 }
 
 function update() {
@@ -66,9 +70,6 @@ function update() {
 
   if (pressDash) {
     dashTimer = 8;
-    if (!holdLeft && !holdRight) {
-      player.vx = player.facing * dashSpeed;
-    }
   }
 
   if (dashTimer > 0) {

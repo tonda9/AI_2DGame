@@ -1,3 +1,5 @@
+const HUD_FONT = '14px monospace';
+
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
@@ -53,7 +55,7 @@ export function renderScene(ctx, canvas, state) {
   drawPlayer(ctx, state.player, state.dashActive);
 
   ctx.fillStyle = '#16302c';
-  ctx.font = '14px monospace';
+  ctx.font = HUD_FONT;
   ctx.fillText(`hold: L=${state.holdLeft} R=${state.holdRight}`, 12, 22);
   ctx.fillText(`press: J=${state.pressJump} D=${state.pressDash}`, 12, 40);
 }
