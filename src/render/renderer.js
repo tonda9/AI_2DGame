@@ -57,33 +57,60 @@ function drawSpike(ctx, obstacle) {
 }
 
 function drawObstacle(ctx, obstacle) {
-  if (obstacle.type === 'spike') drawSpike(ctx, obstacle);
+  const renderedObstacle = {
+    ...obstacle,
+    x: obstacle.currentX ?? obstacle.x,
+    y: obstacle.currentY ?? obstacle.y,
+  };
+  if (obstacle.type === 'spike' || obstacle.type === 'movingSpike') drawSpike(ctx, renderedObstacle);
 }
 
-function drawCollectible(ctx, collectible) {
-  drawPixelRect(ctx, collectible.x + 4, collectible.y, 4, 12, '#ffe082');
-  drawPixelRect(ctx, collectible.x, collectible.y + 4, 12, 4, '#ffe082');
-  drawPixelRect(ctx, collectible.x + 2, collectible.y + 2, 8, 8, '#ffd24f');
+function drawCollectible(ctx, collectible, frameCount) {
+  const bobOffset = Math.sin((frameCount + collectible.x) * 0.08) * 2;
+  const px = collectible.x;
+  const py = collectible.y + bobOffset;
+  const flash = Math.floor(frameCount / 12) % 2;
+  const meatMain = flash ? '#b94d41' : '#c7594b';
+  const meatShade = flash ? '#983c33' : '#8e352e';
+  drawPixelRect(ctx, px, py + 4, 2, 4, '#f1ece3');
+  drawPixelRect(ctx, px + 1, py + 5, 2, 2, '#fff');
+  drawPixelRect(ctx, px + 3, py + 2, 8, 8, meatMain);
+  drawPixelRect(ctx, px + 4, py + 3, 6, 6, meatShade);
+  drawPixelRect(ctx, px + 6, py + 4, 3, 3, '#f3b0a2');
+  drawPixelRect(ctx, px + 9, py + 5, 2, 2, '#f7d8cf');
+}
+
+function drawMovingPlatform(ctx, mapElement, frameCount) {
+  const x = mapElement.currentX ?? mapElement.x;
+  const y = mapElement.currentY ?? mapElement.y;
+  const pulse = Math.floor(frameCount / BOOST_PAD_PULSE_FRAME_DIVISOR) % 2;
+  drawPixelRect(ctx, x, y, mapElement.width, mapElement.height, '#4f5964');
+  drawPixelRect(ctx, x, y, mapElement.width, 3, '#90a1b3');
+  if (pulse) {
+    drawPixelRect(ctx, x + 4, y + mapElement.height - 3, mapElement.width - 8, 2, '#d4ebff');
+  }
 }
 
 function drawBoostPad(ctx, mapElement, frameCount) {
+  const x = mapElement.currentX ?? mapElement.x;
+  const y = mapElement.currentY ?? mapElement.y;
   const pulse = Math.floor(frameCount / BOOST_PAD_PULSE_FRAME_DIVISOR) % 2;
   const pulseWidth = Math.max(
     BOOST_PAD_MIN_PULSE_WIDTH,
     mapElement.width - BOOST_PAD_INSET * BOOST_PAD_PULSE_INSET_MULTIPLIER,
   );
-  const pulseX = mapElement.x + Math.floor((mapElement.width - pulseWidth) / 2);
-  drawPixelRect(ctx, mapElement.x, mapElement.y, mapElement.width, mapElement.height, '#505860');
+  const pulseX = x + Math.floor((mapElement.width - pulseWidth) / 2);
+  drawPixelRect(ctx, x, y, mapElement.width, mapElement.height, '#505860');
   drawPixelRect(
     ctx,
-    mapElement.x + BOOST_PAD_INSET,
-    mapElement.y + BOOST_PAD_INSET,
+    x + BOOST_PAD_INSET,
+    y + BOOST_PAD_INSET,
     mapElement.width - BOOST_PAD_INSET * 2,
     mapElement.height - BOOST_PAD_INSET * 2,
     '#7bf6ff',
   );
   if (pulse) {
-    drawPixelRect(ctx, pulseX, mapElement.y - 2, pulseWidth, 2, '#d9ffff');
+    drawPixelRect(ctx, pulseX, y - 2, pulseWidth, 2, '#d9ffff');
   }
 }
 
@@ -91,6 +118,9 @@ function drawMapElement(ctx, mapElement, frameCount) {
   if (mapElement.type === 'boostPad') {
     drawBoostPad(ctx, mapElement, frameCount);
     return;
+  }
+  if (mapElement.type === 'movingPlatform') {
+    drawMovingPlatform(ctx, mapElement, frameCount);
   }
 }
 
@@ -112,13 +142,15 @@ function drawPlayer(ctx, state) {
   const px = state.player.x;
   const py = state.player.y;
   const body = state.dashActive ? '#6ffff4' : '#4aa35f';
+  const dashTrim = state.dashActive ? '#d4fffb' : '#3a844c';
   const isJumping = !state.grounded && state.velocityY < 0;
   const isFalling = !state.grounded && state.velocityY >= 0;
+  const isDashing = state.dashActive;
   const walkPhase = Math.floor(state.walkCycle / 6) % 2;
-  const facing = state.facing;
+  const facing = isDashing ? state.dashDirection : state.facing;
 
   const mapX = (x, w) => (facing === 1 ? x : SPRITE_WIDTH_BLOCKS - x - w);
-  const spriteY = py + (isJumping ? -2 : 0);
+  const spriteY = py + (isJumping ? -2 : 0) + (isDashing ? -1 : 0);
 
   const bodyBlocks = [
     [1, 1, 5, 1],
@@ -135,13 +167,14 @@ function drawPlayer(ctx, state) {
     drawPixelRect(ctx, px + mapX(x, w) * block, spriteY + y * block, w * block, h * block, body);
   }
 
-  const backLegY = isJumping ? 6 : walkPhase ? 6 : 5;
-  const frontLegY = isJumping ? 6 : walkPhase ? 5 : 6;
-  drawPixelRect(ctx, px + mapX(2, 1) * block, spriteY + backLegY * block, block, block, '#3a844c');
-  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + frontLegY * block, block, block, '#3a844c');
+  const backLegY = isJumping || isDashing ? 6 : walkPhase ? 6 : 5;
+  const frontLegY = isJumping || isDashing ? 6 : walkPhase ? 5 : 6;
+  drawPixelRect(ctx, px + mapX(2, 1) * block, spriteY + backLegY * block, block, block, dashTrim);
+  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + frontLegY * block, block, block, dashTrim);
 
   const tailY = isFalling ? 4 : 5;
-  drawPixelRect(ctx, px + mapX(0, 2) * block, spriteY + tailY * block, 2 * block, block, '#3f9152');
+  const tailColor = isDashing ? '#9afdf4' : '#3f9152';
+  drawPixelRect(ctx, px + mapX(0, 2) * block, spriteY + tailY * block, 2 * block, block, tailColor);
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, block, block, '#fff');
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, 2, 2, '#111');
   drawPixelRect(ctx, px + mapX(7, 1) * block, spriteY + 4 * block, block, block, '#9f6c3f');
@@ -149,12 +182,14 @@ function drawPlayer(ctx, state) {
 
 function drawDashTrail(ctx, state) {
   if (!state.dashActive) return;
-  const dir = state.facing === 1 ? -1 : 1;
-  const baseX = state.player.x + (state.facing === 1 ? -4 : state.player.width - 2);
+  const facing = state.dashDirection;
+  const dir = facing === 1 ? -1 : 1;
+  const baseX = state.player.x + (facing === 1 ? -4 : state.player.width - 2);
   const baseY = state.player.y + 8;
-  drawPixelRect(ctx, baseX, baseY, 6, 10, '#b4fff7');
-  drawPixelRect(ctx, baseX + dir * 6, baseY + 2, 5, 7, '#8de9df');
-  drawPixelRect(ctx, baseX + dir * 12, baseY + 3, 4, 5, '#6dd3c8');
+  const flash = Math.floor(state.frameCount / 2) % 2;
+  drawPixelRect(ctx, baseX - 2, baseY - 3, 10, 16, flash ? '#dffffc' : '#b4fff7');
+  drawPixelRect(ctx, baseX + dir * 8, baseY + 1, 7, 9, '#8de9df');
+  drawPixelRect(ctx, baseX + dir * 15, baseY + 4, 5, 4, '#6dd3c8');
 }
 
 export function renderScene(ctx, canvas, state) {
@@ -178,7 +213,7 @@ export function renderScene(ctx, canvas, state) {
   drawEndMarker(ctx, state.end);
   for (const obstacle of state.obstacles) drawObstacle(ctx, obstacle);
   for (const collectible of state.collectibles) {
-    if (!collectible.collected) drawCollectible(ctx, collectible);
+    if (!collectible.collected) drawCollectible(ctx, collectible, state.frameCount);
   }
   for (const mapElement of state.mapElements || []) drawMapElement(ctx, mapElement, state.frameCount);
   drawDashTrail(ctx, state);
@@ -186,8 +221,6 @@ export function renderScene(ctx, canvas, state) {
 
   ctx.fillStyle = '#16302c';
   ctx.font = HUD_FONT;
-  ctx.fillText(`level: ${state.levelId} (L to switch)`, 12, 22);
-  ctx.fillText(`hold: L=${state.holdLeft} R=${state.holdRight}`, 12, 40);
-  ctx.fillText(`press: J=${state.pressJump} D=${state.pressDash}`, 12, 58);
+  ctx.fillText(`meat: ${state.meatCollected}`, 12, 22);
   ctx.restore();
 }

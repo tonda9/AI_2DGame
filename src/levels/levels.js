@@ -71,6 +71,40 @@ export const LEVELS = [
       { type: 'boostPad', x: 530, y: 120, width: 24, height: 8, forceY: -9.5, forceX: 1.1 },
     ],
   },
+  {
+    id: 'rift-4',
+    backgroundVariant: 'dusk',
+    start: { x: 24, y: 278 },
+    end: { x: 600, y: 66, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 120, height: 40 },
+      { x: 184, y: 320, width: 96, height: 40 },
+      { x: 340, y: 320, width: 96, height: 40 },
+      { x: 496, y: 320, width: 144, height: 40 },
+      { x: 72, y: 264, width: 84, height: 16 },
+      { x: 238, y: 226, width: 80, height: 16 },
+      { x: 390, y: 188, width: 80, height: 16 },
+      { x: 532, y: 146, width: 86, height: 16 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 138, y: 304, width: 24, height: 16 },
+      { type: 'spike', x: 296, y: 304, width: 24, height: 16 },
+      { type: 'spike', x: 454, y: 304, width: 24, height: 16 },
+      { type: 'movingSpike', x: 268, y: 210, width: 24, height: 16, axis: 'x', range: 32, speed: 0.08 },
+      { type: 'movingSpike', x: 558, y: 130, width: 24, height: 16, axis: 'y', range: 18, speed: 0.09 },
+    ],
+    collectibles: [
+      { x: 106, y: 236, width: 12, height: 12 },
+      { x: 272, y: 198, width: 12, height: 12 },
+      { x: 428, y: 160, width: 12, height: 12 },
+      { x: 574, y: 118, width: 12, height: 12 },
+    ],
+    mapElements: [
+      { type: 'boostPad', x: 90, y: 252, width: 24, height: 8, forceY: -10.3, forceX: 0.8 },
+      { type: 'movingPlatform', x: 156, y: 248, width: 72, height: 12, axis: 'x', range: 50, speed: 0.05 },
+      { type: 'movingPlatform', x: 312, y: 206, width: 72, height: 12, axis: 'y', range: 28, speed: 0.045 },
+    ],
+  },
 ];
 
 export function createLevelState(template) {
