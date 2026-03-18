@@ -5,6 +5,8 @@ import { LEVELS, createLevelState } from './levels/levels.js';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const input = new Input();
+const WORLD_WIDTH = 640;
+const WORLD_HEIGHT = 360;
 
 const player = {
   x: 120,
@@ -21,6 +23,9 @@ const jumpVelocity = -8.5;
 const dashSpeed = 7;
 const WALK_CYCLE_FRAMES = 24;
 const FALL_RESPAWN_THRESHOLD = 120;
+const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
+const DEFAULT_BOOST_FORCE_Y = -10;
+const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
 let grounded = false;
 let walkCycle = 0;
@@ -28,6 +33,12 @@ let frameCount = 0;
 
 let levelIndex = 0;
 let level = createLevelState(LEVELS[0]);
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
+}
 
 function overlapsX(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x;
@@ -73,6 +84,23 @@ function isOnGround() {
   });
 }
 
+function applyMapElementInteractions(playerPreviousY) {
+  for (const mapElement of level.mapElements || []) {
+    if (mapElement.type !== 'boostPad') continue;
+    const triggerEdgeY = mapElement.y - BOOST_PAD_TRIGGER_OFFSET_PX;
+    const wasAbove = playerPreviousY + player.height <= triggerEdgeY;
+    const nowTouching = player.y + player.height >= triggerEdgeY;
+    if (wasAbove && nowTouching && overlapsX(player, mapElement)) {
+      const forceY = mapElement.forceY ?? DEFAULT_BOOST_FORCE_Y;
+      const forceX = mapElement.forceX ?? DEFAULT_BOOST_FORCE_X;
+      player.y = mapElement.y - player.height;
+      player.vy = forceY;
+      player.vx += forceX;
+      break;
+    }
+  }
+}
+
 function update() {
   frameCount += 1;
   const holdLeft = input.isDown('left');
@@ -115,14 +143,15 @@ function update() {
 
   const landed = resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
+  applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
   if (grounded && Math.abs(player.vx) > 0) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }
 
-  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+  player.x = Math.max(0, Math.min(WORLD_WIDTH - player.width, player.x));
 
-  if (player.y > canvas.height + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
+  if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
 
   for (const obstacle of level.obstacles) {
     if (intersects(player, obstacle)) {
@@ -144,6 +173,7 @@ function draw() {
     platforms: level.platforms,
     obstacles: level.obstacles,
     collectibles: level.collectibles,
+    mapElements: level.mapElements,
     start: level.start,
     end: level.end,
     levelId: level.id,
@@ -158,6 +188,8 @@ function draw() {
     facing: player.facing,
     frameCount,
     velocityY: player.vy,
+    worldWidth: WORLD_WIDTH,
+    worldHeight: WORLD_HEIGHT,
   });
 }
 
@@ -168,5 +200,7 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);

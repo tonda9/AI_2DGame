@@ -1,5 +1,9 @@
 const HUD_FONT = '14px monospace';
 const SPRITE_WIDTH_BLOCKS = 8;
+const BOOST_PAD_INSET = 2;
+const BOOST_PAD_PULSE_INSET_MULTIPLIER = 4;
+const BOOST_PAD_MIN_PULSE_WIDTH = 2;
+const BOOST_PAD_PULSE_FRAME_DIVISOR = 8;
 
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -16,23 +20,23 @@ function drawCloud(ctx, x, y) {
   drawPixelRect(ctx, x + 4, y + 12, 18, 4, '#f2fbff');
 }
 
-function drawBackground(ctx, canvas, frameCount, variant = 'day') {
-  const scroll = frameCount % (canvas.width + 80);
-  const slowCloudRange = canvas.width + 100;
-  const slowCloudX = wrapPosition((canvas.width + 120) - scroll * 0.6, slowCloudRange);
+function drawBackground(ctx, worldWidth, worldHeight, frameCount, variant = 'day') {
+  const scroll = frameCount % (worldWidth + 80);
+  const slowCloudRange = worldWidth + 100;
+  const slowCloudX = wrapPosition((worldWidth + 120) - scroll * 0.6, slowCloudRange);
   const isDusk = variant === 'dusk';
   const sky = isDusk ? '#6777c9' : '#87c7ff';
   const ground = isDusk ? '#4d8d55' : '#5aa05a';
   const hillA = isDusk ? '#5f8c7d' : '#72b27a';
   const hillB = isDusk ? '#54786b' : '#6ea773';
 
-  drawPixelRect(ctx, 0, 0, canvas.width, canvas.height, sky);
-  drawPixelRect(ctx, 0, canvas.height - 64, canvas.width, 64, ground);
+  drawPixelRect(ctx, 0, 0, worldWidth, worldHeight, sky);
+  drawPixelRect(ctx, 0, worldHeight - 64, worldWidth, 64, ground);
 
   drawPixelRect(ctx, 70, 220, 120, 40, hillA);
   drawPixelRect(ctx, 420, 210, 170, 50, hillB);
 
-  drawCloud(ctx, canvas.width - scroll, 54);
+  drawCloud(ctx, worldWidth - scroll, 54);
   drawCloud(ctx, slowCloudX, 84);
 }
 
@@ -60,6 +64,34 @@ function drawCollectible(ctx, collectible) {
   drawPixelRect(ctx, collectible.x + 4, collectible.y, 4, 12, '#ffe082');
   drawPixelRect(ctx, collectible.x, collectible.y + 4, 12, 4, '#ffe082');
   drawPixelRect(ctx, collectible.x + 2, collectible.y + 2, 8, 8, '#ffd24f');
+}
+
+function drawBoostPad(ctx, mapElement, frameCount) {
+  const pulse = Math.floor(frameCount / BOOST_PAD_PULSE_FRAME_DIVISOR) % 2;
+  const pulseWidth = Math.max(
+    BOOST_PAD_MIN_PULSE_WIDTH,
+    mapElement.width - BOOST_PAD_INSET * BOOST_PAD_PULSE_INSET_MULTIPLIER,
+  );
+  const pulseX = mapElement.x + Math.floor((mapElement.width - pulseWidth) / 2);
+  drawPixelRect(ctx, mapElement.x, mapElement.y, mapElement.width, mapElement.height, '#505860');
+  drawPixelRect(
+    ctx,
+    mapElement.x + BOOST_PAD_INSET,
+    mapElement.y + BOOST_PAD_INSET,
+    mapElement.width - BOOST_PAD_INSET * 2,
+    mapElement.height - BOOST_PAD_INSET * 2,
+    '#7bf6ff',
+  );
+  if (pulse) {
+    drawPixelRect(ctx, pulseX, mapElement.y - 2, pulseWidth, 2, '#d9ffff');
+  }
+}
+
+function drawMapElement(ctx, mapElement, frameCount) {
+  if (mapElement.type === 'boostPad') {
+    drawBoostPad(ctx, mapElement, frameCount);
+    return;
+  }
 }
 
 function drawStartMarker(ctx, start) {
@@ -126,7 +158,20 @@ function drawDashTrail(ctx, state) {
 }
 
 export function renderScene(ctx, canvas, state) {
-  drawBackground(ctx, canvas, state.frameCount, state.backgroundVariant);
+  const worldWidth = state.worldWidth ?? canvas.width;
+  const worldHeight = state.worldHeight ?? canvas.height;
+  const scale = Math.min(canvas.width / worldWidth, canvas.height / worldHeight);
+  const viewportWidth = worldWidth * scale;
+  const viewportHeight = worldHeight * scale;
+  const offsetX = (canvas.width - viewportWidth) / 2;
+  const offsetY = (canvas.height - viewportHeight) / 2;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  drawPixelRect(ctx, 0, 0, canvas.width, canvas.height, '#111');
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  drawBackground(ctx, worldWidth, worldHeight, state.frameCount, state.backgroundVariant);
 
   for (const platform of state.platforms) drawPlatform(ctx, platform);
   drawStartMarker(ctx, state.start);
@@ -135,6 +180,7 @@ export function renderScene(ctx, canvas, state) {
   for (const collectible of state.collectibles) {
     if (!collectible.collected) drawCollectible(ctx, collectible);
   }
+  for (const mapElement of state.mapElements || []) drawMapElement(ctx, mapElement, state.frameCount);
   drawDashTrail(ctx, state);
   drawPlayer(ctx, state);
 
@@ -143,4 +189,5 @@ export function renderScene(ctx, canvas, state) {
   ctx.fillText(`level: ${state.levelId} (L to switch)`, 12, 22);
   ctx.fillText(`hold: L=${state.holdLeft} R=${state.holdRight}`, 12, 40);
   ctx.fillText(`press: J=${state.pressJump} D=${state.pressDash}`, 12, 58);
+  ctx.restore();
 }

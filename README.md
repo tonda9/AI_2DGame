@@ -30,10 +30,27 @@ AI_2DGame/
 - Walk/jump animation states
 - Dash effect with multi-block color trail
 - Pixel-art platforms + ground
-- Two level definitions (`meadow-1`, `canyon-2`) with start/end points
-- Pixel-art obstacles (spikes), platform gaps, and star collectibles
+- Three level definitions (`meadow-1`, `canyon-2`, `blackhole-3`) with start/end points
+- Pixel-art obstacles (spikes), platform gaps, boost pads, and star collectibles
 - Pixel-art sky with animated clouds
 - Input remains isolated in `src/core/input.js`
+
+## Level object format
+
+Add new maps in `src/levels/levels.js` using the same shape:
+
+```js
+{
+  id: 'your-level-id',
+  backgroundVariant: 'day', // or 'dusk'
+  start: { x: 24, y: 278 },
+  end: { x: 604, y: 125, width: 16, height: 40 },
+  platforms: [{ x: 0, y: 320, width: 640, height: 40 }],
+  obstacles: [{ type: 'spike', x: 300, y: 304, width: 24, height: 16 }],
+  collectibles: [{ x: 220, y: 210, width: 12, height: 12 }],
+  mapElements: [{ type: 'boostPad', x: 200, y: 308, width: 24, height: 8, forceY: -10, forceX: 1.2 }],
+}
+```
 
 ## GitHub Pages preview
 
@@ -59,3 +76,5 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 
 - Double-click `index.html` to open directly in a browser, or
 - serve with any static server (optional), e.g. `python3 -m http.server`.
+- The canvas now auto-resizes to full browser window and scales the 640x360 world to fit.
+- Press `L` to switch levels until `blackhole-3` to test dash + collectibles + boost-pad routes.
