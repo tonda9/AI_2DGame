@@ -18,6 +18,7 @@ const speed = 2;
 const gravity = 0.45;
 const jumpVelocity = -8.5;
 const dashSpeed = 7;
+const WALK_CYCLE_FRAMES = 24;
 let dashTimer = 0;
 let grounded = false;
 let walkCycle = 0;
@@ -95,7 +96,9 @@ function update() {
   const landed = resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
   grounded = landed || isOnGround();
-  if (grounded && Math.abs(player.vx) > 0) walkCycle = (walkCycle + 1) % 24;
+  if (grounded && Math.abs(player.vx) > 0) {
+    walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
+  }
 
   player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
 }

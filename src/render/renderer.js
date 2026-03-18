@@ -1,8 +1,13 @@
 const HUD_FONT = '14px monospace';
+const SPRITE_WIDTH_BLOCKS = 8;
 
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x, y, w, h);
+}
+
+function wrapPosition(value, range) {
+  return ((value % range) + range) % range;
 }
 
 function drawCloud(ctx, x, y) {
@@ -14,7 +19,7 @@ function drawCloud(ctx, x, y) {
 function drawBackground(ctx, canvas, frameCount) {
   const scroll = frameCount % (canvas.width + 80);
   const slowCloudRange = canvas.width + 100;
-  const slowCloudX = (((canvas.width + 120) - scroll * 0.6) % slowCloudRange + slowCloudRange) % slowCloudRange;
+  const slowCloudX = wrapPosition((canvas.width + 120) - scroll * 0.6, slowCloudRange);
 
   drawPixelRect(ctx, 0, 0, canvas.width, canvas.height, '#87c7ff');
   drawPixelRect(ctx, 0, canvas.height - 64, canvas.width, 64, '#5aa05a');
@@ -41,7 +46,7 @@ function drawPlayer(ctx, state) {
   const walkPhase = Math.floor(state.walkCycle / 6) % 2;
   const facing = state.facing;
 
-  const mapX = (x, w) => (facing === 1 ? x : 8 - x - w);
+  const mapX = (x, w) => (facing === 1 ? x : SPRITE_WIDTH_BLOCKS - x - w);
   const spriteY = py + (isJumping ? -2 : 0);
 
   const bodyBlocks = [
