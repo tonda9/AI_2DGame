@@ -19,6 +19,9 @@ const gravity = 0.45;
 const jumpVelocity = -8.5;
 const dashSpeed = 7;
 let dashTimer = 0;
+let grounded = false;
+let walkCycle = 0;
+let frameCount = 0;
 
 const platforms = [
   { x: 0, y: 320, width: 640, height: 40 },
@@ -53,6 +56,7 @@ function isOnGround() {
 }
 
 function update() {
+  frameCount += 1;
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
   const pressJump = input.isPressed('jump');
@@ -90,6 +94,8 @@ function update() {
 
   const landed = resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
+  grounded = landed || isOnGround();
+  if (grounded && Math.abs(player.vx) > 0) walkCycle = (walkCycle + 1) % 24;
 
   player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
 }
@@ -103,6 +109,11 @@ function draw() {
     holdRight: input.isDown('right'),
     pressJump: input.isPressed('jump'),
     pressDash: input.isPressed('dash'),
+    grounded,
+    walkCycle,
+    facing: player.facing,
+    frameCount,
+    velocityY: player.vy,
   });
 }
 

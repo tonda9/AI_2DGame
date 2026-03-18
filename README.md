@@ -1,4 +1,13 @@
-# AI 2D Platformer — Minimal Canvas + ES Modules
+# AI 2D Platformer — Pixel-Art Dinosaur
+
+Minimal HTML5 canvas platformer using ES modules.
+
+## Controls
+
+- Move left: `A` or `←`
+- Move right: `D` or `→`
+- Jump: `Space`, `W`, or `↑`
+- Dash: `Shift` or `X`
 
 ## File structure
 
@@ -6,27 +15,41 @@
 AI_2DGame/
 ├─ index.html
 ├─ style.css
+├─ .github/workflows/deploy-pages.yml
 └─ src/
    ├─ main.js
-   ├─ core/
-   │  └─ input.js
-   └─ render/
-      └─ renderer.js
+   ├─ core/input.js
+   └─ render/renderer.js
 ```
 
-## Current modules
+## What is implemented
 
-- `index.html`  
-  Hosts the `<canvas>` and loads `src/main.js` as an ES module.
+- 32x32 pixel-art dinosaur rendered from colored blocks
+- Walk/jump animation states
+- Dash effect with multi-block color trail
+- Pixel-art platforms + ground
+- Pixel-art sky with animated clouds
+- Input remains isolated in `src/core/input.js`
 
-- `style.css`  
-  Centers the canvas and keeps a pixel-art-friendly page layout.
+## GitHub Pages preview
 
-- `src/core/input.js`  
-  Keyboard input abstraction for `left`, `right`, `jump`, and `dash`, with support for hold (`isDown`) and edge-triggered press (`isPressed`) states.
+This project is static (no build step). It can be deployed directly to GitHub Pages.
 
-- `src/main.js`  
-  Main game loop (`requestAnimationFrame`), simple movement + jump/dash behavior, and platform collision checks.
+### Option A: Included GitHub Actions workflow (recommended)
 
-- `src/render/renderer.js`  
-  Pixel-art drawing layer for background, platforms, dinosaur player sprite, dash effect, and small HUD text.
+1. Push to `main`.
+2. In GitHub repo settings, ensure **Pages** source is set to **GitHub Actions**.
+3. The workflow `.github/workflows/deploy-pages.yml` deploys `index.html`, `style.css`, and `src/`.
+4. Preview URL will be:
+   `https://<your-username>.github.io/AI_2DGame/`
+
+### Option B: Branch/folder deployment
+
+1. In GitHub **Settings → Pages**, choose **Deploy from a branch**.
+2. Select `main` and `/ (root)`.
+3. Save and wait for publish.
+
+## Local preview
+
+- Double-click `index.html` to open directly in a browser, or
+- serve with any static server (optional), e.g. `python3 -m http.server`.
