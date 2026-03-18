@@ -32,6 +32,7 @@ const jumpBufferFrames = 6;
 const wallSlideFallSpeed = 1.7;
 const wallJumpVelocity = -8;
 const wallJumpPush = 3.8;
+const walkCycleVelocityThreshold = 0.2;
 const dashSpeed = 7;
 const dashFrames = 8;
 const WALK_CYCLE_FRAMES = 24;
@@ -255,8 +256,8 @@ function update() {
     }
   }
 
-  if (!holdJump && player.vy < 0) player.vy += jumpCutGravity;
-  const gravity = getGravityStrength(wallSliding, player.vy);
+  const jumpCutting = !holdJump && player.vy < 0;
+  const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
   player.vy = Math.min(maxFallSpeed, player.vy + gravity);
   if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
 
@@ -268,7 +269,7 @@ function update() {
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
-  if (grounded && Math.abs(player.vx) > 0.2) {
+  if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }
 
