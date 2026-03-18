@@ -5,12 +5,13 @@ body {
 }
 
 body {
-  display: grid;
-  place-items: center;
   background: #111;
+  overflow: hidden;
 }
 
 canvas {
-  border: 1px solid #333;
+  width: 100vw;
+  height: 100vh;
+  display: block;
   image-rendering: pixelated;
 }

@@ -5,6 +5,8 @@ import { LEVELS, createLevelState } from './levels/levels.js';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const input = new Input();
+const WORLD_WIDTH = 640;
+const WORLD_HEIGHT = 360;
 
 const player = {
   x: 120,
@@ -31,6 +33,12 @@ let frameCount = 0;
 
 let levelIndex = 0;
 let level = createLevelState(LEVELS[0]);
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
+}
 
 function overlapsX(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x;
@@ -141,9 +149,9 @@ function update() {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }
 
-  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+  player.x = Math.max(0, Math.min(WORLD_WIDTH - player.width, player.x));
 
-  if (player.y > canvas.height + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
+  if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
 
   for (const obstacle of level.obstacles) {
     if (intersects(player, obstacle)) {
@@ -180,6 +188,8 @@ function draw() {
     facing: player.facing,
     frameCount,
     velocityY: player.vy,
+    worldWidth: WORLD_WIDTH,
+    worldHeight: WORLD_HEIGHT,
   });
 }
 
@@ -190,5 +200,7 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);

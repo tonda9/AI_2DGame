@@ -76,3 +76,5 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 
 - Double-click `index.html` to open directly in a browser, or
 - serve with any static server (optional), e.g. `python3 -m http.server`.
+- The canvas now auto-resizes to full browser window and scales the 640x360 world to fit.
+- Press `L` to switch levels until `blackhole-3` to test dash + collectibles + boost-pad routes.
