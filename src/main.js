@@ -22,9 +22,12 @@ const runAccelGround = 0.42;
 const runAccelAir = 0.24;
 const runDecelGround = 0.5;
 const runDecelAir = 0.16;
+const runTurnAccelMultiplier = 1.35;
 const gravityRise = 0.4;
 const gravityFall = 0.52;
 const jumpCutGravity = 0.6;
+const apexFloatVelocity = 1.2;
+const apexGravityMultiplier = 0.78;
 const maxFallSpeed = 10;
 const jumpVelocity = -8.5;
 const coyoteFrames = 6;
@@ -35,11 +38,15 @@ const wallJumpPush = 3.8;
 const walkCycleVelocityThreshold = 0.2;
 const dashSpeed = 7;
 const dashFrames = 8;
+const dashExitMomentumSpeed = 3.2;
+const dashExitMomentumDecay = 0.22;
 const WALK_CYCLE_FRAMES = 24;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
+const DEFAULT_TRAMPOLINE_FORCE_Y = -12.5;
+const DEFAULT_TRAMPOLINE_FORCE_X = 0;
 let dashTimer = 0;
 let dashDirection = 1;
 let dashAvailable = true;
@@ -70,9 +77,11 @@ function approach(current, target, delta) {
   return target;
 }
 
-function getGravityStrength(wallSliding, velocityY) {
+function getGravityStrength(wallSliding, velocityY, holdingJump) {
   if (wallSliding) return 0;
-  return velocityY > 0 ? gravityFall : gravityRise;
+  if (velocityY > 0) return gravityFall;
+  if (Math.abs(velocityY) < apexFloatVelocity) return gravityRise * apexGravityMultiplier;
+  return holdingJump ? gravityRise : gravityRise * 1.1;
 }
 
 function overlapsY(a, b) {
@@ -142,16 +151,18 @@ function isOnGround() {
 
 function applyMapElementInteractions(playerPreviousY) {
   for (const mapElement of level.mapElements || []) {
-    if (mapElement.type !== 'boostPad') continue;
+    const isBoostPad = mapElement.type === 'boostPad';
+    const isTrampoline = mapElement.type === 'trampoline';
+    if (!isBoostPad && !isTrampoline) continue;
     const mapRect = resolveEntityRect(mapElement);
     const triggerEdgeY = mapRect.y - BOOST_PAD_TRIGGER_OFFSET_PX;
     const wasAbove = playerPreviousY + player.height <= triggerEdgeY;
     const nowTouching = player.y + player.height >= triggerEdgeY;
     if (wasAbove && nowTouching && overlapsX(player, mapRect)) {
-      const forceY = mapElement.forceY ?? DEFAULT_BOOST_FORCE_Y;
-      const forceX = mapElement.forceX ?? DEFAULT_BOOST_FORCE_X;
+      const forceY = mapElement.forceY ?? (isTrampoline ? DEFAULT_TRAMPOLINE_FORCE_Y : DEFAULT_BOOST_FORCE_Y);
+      const forceX = mapElement.forceX ?? (isTrampoline ? DEFAULT_TRAMPOLINE_FORCE_X : DEFAULT_BOOST_FORCE_X);
       player.y = mapRect.y - player.height;
-      player.vy = forceY;
+      player.vy = isTrampoline ? Math.min(forceY, player.vy * -0.9) : forceY;
       player.vx += forceX;
       break;
     }
@@ -171,6 +182,26 @@ function updateDynamicEntities() {
 
   for (const obstacle of level.obstacles) {
     if (obstacle.type === 'movingSpike') applyMotion(obstacle);
+    if (obstacle.type === 'fallingSpike') {
+      const range = obstacle.range ?? 24;
+      const speed = obstacle.speed ?? 0.08;
+      const phase = obstacle.phase ?? 0;
+      obstacle.currentX = obstacle.x;
+      obstacle.currentY = obstacle.y + Math.abs(Math.sin(frameCount * speed + phase)) * range;
+    }
+    if (obstacle.type === 'swingSpike') {
+      const anchorX = obstacle.anchorX ?? obstacle.x + obstacle.width / 2;
+      const anchorY = obstacle.anchorY ?? obstacle.y;
+      const ropeLength = obstacle.ropeLength ?? 28;
+      const swingArc = obstacle.swingArc ?? 0.9;
+      const speed = obstacle.speed ?? 0.07;
+      const phase = obstacle.phase ?? 0;
+      const angle = Math.sin(frameCount * speed + phase) * swingArc;
+      obstacle.currentX = anchorX + Math.sin(angle) * ropeLength - obstacle.width / 2;
+      obstacle.currentY = anchorY + Math.cos(angle) * ropeLength;
+      obstacle.currentAnchorX = anchorX;
+      obstacle.currentAnchorY = anchorY;
+    }
   }
   for (const mapElement of level.mapElements || []) {
     if (mapElement.type === 'movingPlatform') applyMotion(mapElement);
@@ -212,6 +243,7 @@ function update() {
   const pressDash = input.isPressed('dash');
   const pressSwitchLevel = input.isPressed('switchLevel');
   const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
+  let dashJustEnded = false;
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
 
@@ -235,13 +267,24 @@ function update() {
   if (dashTimer > 0) {
     dashTimer -= 1;
     player.vx = dashDirection * dashSpeed;
-  } else {
-    const acceleration = grounded ? runAccelGround : runAccelAir;
+    player.vy = approach(player.vy, 0, 0.3);
+    if (dashTimer === 0) dashJustEnded = true;
+  }
+  if (dashTimer === 0) {
+    const accelerationBase = grounded ? runAccelGround : runAccelAir;
     const deceleration = grounded ? runDecelGround : runDecelAir;
+    const reversingDirection = inputX !== 0 && Math.sign(player.vx) !== 0 && Math.sign(player.vx) !== inputX;
+    const acceleration = reversingDirection ? accelerationBase * runTurnAccelMultiplier : accelerationBase;
     const targetSpeed = inputX * maxRunSpeed;
-    player.vx = inputX !== 0
-      ? approach(player.vx, targetSpeed, acceleration)
-      : approach(player.vx, 0, deceleration);
+    if (dashJustEnded && inputX === 0) {
+      player.vx = dashDirection * dashExitMomentumSpeed;
+    } else if (!dashJustEnded && inputX === 0 && Math.abs(player.vx) > maxRunSpeed) {
+      player.vx = approach(player.vx, 0, dashExitMomentumDecay);
+    } else {
+      player.vx = inputX !== 0
+        ? approach(player.vx, targetSpeed, acceleration)
+        : approach(player.vx, 0, deceleration);
+    }
   }
 
   if (jumpBufferTimer > 0) {
@@ -260,7 +303,7 @@ function update() {
   }
 
   const jumpCutting = !holdJump && player.vy < 0;
-  const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
+  const gravity = getGravityStrength(wallSliding, player.vy, holdJump) + (jumpCutting ? jumpCutGravity : 0);
   player.vy = Math.min(maxFallSpeed, player.vy + gravity);
   if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
 
@@ -318,6 +361,7 @@ function draw() {
     walkCycle,
     facing: player.facing,
     dashDirection,
+    dashAvailable,
     meatCollected,
     frameCount,
     velocityY: player.vy,

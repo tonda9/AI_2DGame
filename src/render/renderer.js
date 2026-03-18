@@ -60,13 +60,34 @@ function drawSpike(ctx, obstacle) {
   }
 }
 
+function drawSwingChain(ctx, obstacle) {
+  const anchorX = obstacle.currentAnchorX ?? obstacle.anchorX ?? obstacle.x + obstacle.width / 2;
+  const anchorY = obstacle.currentAnchorY ?? obstacle.anchorY ?? obstacle.y;
+  const spikeCenterX = obstacle.x + obstacle.width / 2;
+  const spikeTopY = obstacle.y;
+  const linkCount = Math.max(2, Math.floor((spikeTopY - anchorY) / 4));
+  for (let i = 0; i <= linkCount; i += 1) {
+    const t = i / linkCount;
+    const x = anchorX + (spikeCenterX - anchorX) * t;
+    const y = anchorY + (spikeTopY - anchorY) * t;
+    drawPixelRect(ctx, Math.floor(x) - 1, Math.floor(y), 2, 2, '#b4bac1');
+  }
+}
+
 function drawObstacle(ctx, obstacle) {
   const renderedObstacle = {
     ...obstacle,
     x: obstacle.currentX ?? obstacle.x,
     y: obstacle.currentY ?? obstacle.y,
   };
-  if (obstacle.type === 'spike' || obstacle.type === 'movingSpike') drawSpike(ctx, renderedObstacle);
+  if (obstacle.type === 'spike' || obstacle.type === 'movingSpike' || obstacle.type === 'fallingSpike') {
+    drawSpike(ctx, renderedObstacle);
+    return;
+  }
+  if (obstacle.type === 'swingSpike') {
+    drawSwingChain(ctx, renderedObstacle);
+    drawSpike(ctx, renderedObstacle);
+  }
 }
 
 function drawCollectible(ctx, collectible, frameCount) {
@@ -123,6 +144,15 @@ function drawMapElement(ctx, mapElement, frameCount) {
     drawBoostPad(ctx, mapElement, frameCount);
     return;
   }
+  if (mapElement.type === 'trampoline') {
+    const x = mapElement.currentX ?? mapElement.x;
+    const y = mapElement.currentY ?? mapElement.y;
+    const pulse = Math.floor(frameCount / BOOST_PAD_PULSE_FRAME_DIVISOR) % 2;
+    drawPixelRect(ctx, x, y, mapElement.width, mapElement.height, '#6d4f30');
+    drawPixelRect(ctx, x + 2, y + 2, mapElement.width - 4, mapElement.height - 4, '#f0a05f');
+    drawPixelRect(ctx, x + 4, y + 2, mapElement.width - 8, 2, pulse ? '#ffe6b0' : '#ffd79f');
+    return;
+  }
   if (mapElement.type === 'movingPlatform') {
     drawMovingPlatform(ctx, mapElement, frameCount);
   }
@@ -145,8 +175,10 @@ function drawPlayer(ctx, state) {
   const block = 4;
   const px = state.player.x;
   const py = state.player.y;
-  const body = state.dashActive ? '#6ffff4' : '#4aa35f';
-  const dashTrim = state.dashActive ? '#d4fffb' : '#3a844c';
+  const noAirDash = !state.grounded && !state.dashAvailable && !state.dashActive;
+  const airborneTint = !state.grounded && state.dashAvailable && !state.dashActive;
+  const body = state.dashActive ? '#6ffff4' : noAirDash ? '#6f8b73' : airborneTint ? '#59ac6c' : '#4aa35f';
+  const dashTrim = state.dashActive ? '#d4fffb' : noAirDash ? '#577160' : '#3a844c';
   const isJumping = !state.grounded && state.velocityY < 0;
   const isFalling = !state.grounded && state.velocityY >= 0;
   const isDashing = state.dashActive;
