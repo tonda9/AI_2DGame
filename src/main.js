@@ -68,6 +68,11 @@ function approach(current, target, delta) {
   return target;
 }
 
+function getGravityStrength(wallSliding, velocityY) {
+  if (wallSliding) return 0;
+  return velocityY > 0 ? gravityFall : gravityRise;
+}
+
 function overlapsY(a, b) {
   return a.y < b.y + b.height && a.y + a.height > b.y;
 }
@@ -173,10 +178,11 @@ function movePlayerHorizontally(distance) {
   if (distance === 0) return;
   const direction = Math.sign(distance);
   let remaining = Math.abs(distance);
+  const solidPlatforms = getSolidPlatforms();
   while (remaining > 0) {
     const step = Math.min(1, remaining);
     player.x += step * direction;
-    const hitSolid = getSolidPlatforms().some((platform) => intersects(player, platform) && overlapsY(player, platform));
+    const hitSolid = solidPlatforms.some((platform) => intersects(player, platform) && overlapsY(player, platform));
     if (hitSolid) {
       player.x -= step * direction;
       player.vx = 0;
@@ -250,7 +256,7 @@ function update() {
   }
 
   if (!holdJump && player.vy < 0) player.vy += jumpCutGravity;
-  const gravity = wallSliding ? 0 : player.vy > 0 ? gravityFall : gravityRise;
+  const gravity = getGravityStrength(wallSliding, player.vy);
   player.vy = Math.min(maxFallSpeed, player.vy + gravity);
   if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
 
