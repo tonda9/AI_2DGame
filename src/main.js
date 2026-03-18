@@ -17,9 +17,21 @@ const player = {
   vy: 0,
   facing: 1,
 };
-const speed = 2;
-const gravity = 0.45;
+const maxRunSpeed = 2.7;
+const runAccelGround = 0.42;
+const runAccelAir = 0.24;
+const runDecelGround = 0.5;
+const runDecelAir = 0.16;
+const gravityRise = 0.4;
+const gravityFall = 0.52;
+const jumpCutGravity = 0.6;
+const maxFallSpeed = 10;
 const jumpVelocity = -8.5;
+const coyoteFrames = 6;
+const jumpBufferFrames = 6;
+const wallSlideFallSpeed = 1.7;
+const wallJumpVelocity = -8;
+const wallJumpPush = 3.8;
 const dashSpeed = 7;
 const dashFrames = 8;
 const WALK_CYCLE_FRAMES = 24;
@@ -30,8 +42,12 @@ const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
 let dashDirection = 1;
 let grounded = false;
+let coyoteTimer = 0;
+let jumpBufferTimer = 0;
 let walkCycle = 0;
 let frameCount = 0;
+let meatCollected = 0;
+const collectedMeatKeys = new Set();
 
 let levelIndex = 0;
 let level = createLevelState(LEVELS[0]);
@@ -44,6 +60,12 @@ function resizeCanvas() {
 
 function overlapsX(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x;
+}
+
+function approach(current, target, delta) {
+  if (current < target) return Math.min(current + delta, target);
+  if (current > target) return Math.max(current - delta, target);
+  return target;
 }
 
 function overlapsY(a, b) {
@@ -81,6 +103,10 @@ function resetPlayerToStart() {
 function setLevel(index) {
   levelIndex = (index + LEVELS.length) % LEVELS.length;
   level = createLevelState(LEVELS[levelIndex]);
+  level.collectibles.forEach((collectible, collectibleIndex) => {
+    const meatKey = `${level.id}:${collectibleIndex}`;
+    collectible.collected = collectedMeatKeys.has(meatKey);
+  });
   resetPlayerToStart();
 }
 
@@ -161,44 +187,73 @@ function movePlayerHorizontally(distance) {
   }
 }
 
+function isTouchingWall(direction) {
+  const probe = { ...player, x: player.x + direction };
+  if (probe.x <= 0 || probe.x + probe.width >= WORLD_WIDTH) return true;
+  return getSolidPlatforms().some((platform) => intersects(probe, platform) && overlapsY(probe, platform));
+}
+
 function update() {
   frameCount += 1;
   updateDynamicEntities();
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
+  const holdJump = input.isDown('jump');
   const pressJump = input.isPressed('jump');
   const pressDash = input.isPressed('dash');
   const pressSwitchLevel = input.isPressed('switchLevel');
+  const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
 
-  player.vx = 0;
-  if (holdLeft) {
-    player.vx -= speed;
-    player.facing = -1;
-  }
-  if (holdRight) {
-    player.vx += speed;
-    player.facing = 1;
-  }
+  if (inputX !== 0) player.facing = inputX;
+  if (pressJump) jumpBufferTimer = jumpBufferFrames;
+  else jumpBufferTimer = Math.max(0, jumpBufferTimer - 1);
+  coyoteTimer = grounded ? coyoteFrames : Math.max(0, coyoteTimer - 1);
+
+  const touchingLeftWall = isTouchingWall(-1);
+  const touchingRightWall = isTouchingWall(1);
+  const wallDirection = touchingLeftWall ? -1 : touchingRightWall ? 1 : 0;
+  const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
+    && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
   if (pressDash) {
-    dashDirection = holdLeft ? -1 : holdRight ? 1 : player.facing;
+    dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
   }
 
   if (dashTimer > 0) {
     dashTimer -= 1;
-    if (holdLeft) player.vx = -dashSpeed;
-    else if (holdRight) player.vx = dashSpeed;
-    else player.vx = dashDirection * dashSpeed;
+    player.vx = dashDirection * dashSpeed;
+  } else {
+    const acceleration = grounded ? runAccelGround : runAccelAir;
+    const deceleration = grounded ? runDecelGround : runDecelAir;
+    const targetSpeed = inputX * maxRunSpeed;
+    player.vx = inputX !== 0
+      ? approach(player.vx, targetSpeed, acceleration)
+      : approach(player.vx, 0, deceleration);
   }
 
-  if (pressJump && isOnGround()) {
-    player.vy = jumpVelocity;
+  if (jumpBufferTimer > 0) {
+    if (wallSliding) {
+      player.vy = wallJumpVelocity;
+      player.vx = -wallDirection * wallJumpPush;
+      player.facing = -wallDirection;
+      jumpBufferTimer = 0;
+      coyoteTimer = 0;
+    } else if (coyoteTimer > 0) {
+      player.vy = jumpVelocity;
+      jumpBufferTimer = 0;
+      coyoteTimer = 0;
+      grounded = false;
+    }
   }
 
-  player.vy += gravity;
+  if (!holdJump && player.vy < 0) player.vy += jumpCutGravity;
+  const gravity = wallSliding ? 0 : player.vy > 0 ? gravityFall : gravityRise;
+  player.vy = Math.min(maxFallSpeed, player.vy + gravity);
+  if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
+
   const previousY = player.y;
   movePlayerHorizontally(player.vx);
   player.y += player.vy;
@@ -207,7 +262,7 @@ function update() {
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
-  if (grounded && Math.abs(player.vx) > 0) {
+  if (grounded && Math.abs(player.vx) > 0.2) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }
 
@@ -222,8 +277,15 @@ function update() {
     }
   }
 
-  for (const collectible of level.collectibles) {
-    if (!collectible.collected && intersects(player, collectible)) collectible.collected = true;
+  for (const [collectibleIndex, collectible] of level.collectibles.entries()) {
+    if (!collectible.collected && intersects(player, collectible)) {
+      collectible.collected = true;
+      const meatKey = `${level.id}:${collectibleIndex}`;
+      if (!collectedMeatKeys.has(meatKey)) {
+        collectedMeatKeys.add(meatKey);
+        meatCollected += 1;
+      }
+    }
   }
 
   if (intersects(player, level.end)) setLevel(levelIndex + 1);
@@ -241,14 +303,11 @@ function draw() {
     levelId: level.id,
     backgroundVariant: level.backgroundVariant,
     dashActive: dashTimer > 0,
-    holdLeft: input.isDown('left'),
-    holdRight: input.isDown('right'),
-    pressJump: input.isPressed('jump'),
-    pressDash: input.isPressed('dash'),
     grounded,
     walkCycle,
     facing: player.facing,
     dashDirection,
+    meatCollected,
     frameCount,
     velocityY: player.vy,
     worldWidth: WORLD_WIDTH,

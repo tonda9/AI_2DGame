@@ -69,10 +69,15 @@ function drawCollectible(ctx, collectible, frameCount) {
   const bobOffset = Math.sin((frameCount + collectible.x) * 0.08) * 2;
   const px = collectible.x;
   const py = collectible.y + bobOffset;
-  const glow = Math.floor(frameCount / 10) % 2 ? '#ffe082' : '#fff1a0';
-  drawPixelRect(ctx, px + 4, py, 4, 12, glow);
-  drawPixelRect(ctx, px, py + 4, 12, 4, glow);
-  drawPixelRect(ctx, px + 2, py + 2, 8, 8, '#ffd24f');
+  const flash = Math.floor(frameCount / 12) % 2;
+  const meatMain = flash ? '#b94d41' : '#c7594b';
+  const meatShade = flash ? '#983c33' : '#8e352e';
+  drawPixelRect(ctx, px, py + 4, 2, 4, '#f1ece3');
+  drawPixelRect(ctx, px + 1, py + 5, 2, 2, '#fff');
+  drawPixelRect(ctx, px + 3, py + 2, 8, 8, meatMain);
+  drawPixelRect(ctx, px + 4, py + 3, 6, 6, meatShade);
+  drawPixelRect(ctx, px + 6, py + 4, 3, 3, '#f3b0a2');
+  drawPixelRect(ctx, px + 9, py + 5, 2, 2, '#f7d8cf');
 }
 
 function drawMovingPlatform(ctx, mapElement, frameCount) {
@@ -216,8 +221,6 @@ export function renderScene(ctx, canvas, state) {
 
   ctx.fillStyle = '#16302c';
   ctx.font = HUD_FONT;
-  ctx.fillText(`level: ${state.levelId} (L to switch)`, 12, 22);
-  ctx.fillText(`hold: L=${state.holdLeft} R=${state.holdRight}`, 12, 40);
-  ctx.fillText(`press: J=${state.pressJump} D=${state.pressDash}`, 12, 58);
+  ctx.fillText(`meat: ${state.meatCollected}`, 12, 22);
   ctx.restore();
 }
