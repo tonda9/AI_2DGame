@@ -3,6 +3,7 @@ const ACTION_KEYS = {
   right: ['ArrowRight', 'KeyD'],
   jump: ['Space', 'KeyW', 'ArrowUp'],
   dash: ['ShiftLeft', 'ShiftRight', 'KeyX'],
+  switchLevel: ['KeyL'],
 };
 
 export class Input {

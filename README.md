@@ -8,6 +8,7 @@ Minimal HTML5 canvas platformer using ES modules.
 - Move right: `D` or `→`
 - Jump: `Space`, `W`, or `↑`
 - Dash: `Shift` or `X`
+- Switch level: `L`
 
 ## File structure
 
@@ -19,6 +20,7 @@ AI_2DGame/
 └─ src/
    ├─ main.js
    ├─ core/input.js
+   ├─ levels/levels.js
    └─ render/renderer.js
 ```
 
@@ -28,6 +30,8 @@ AI_2DGame/
 - Walk/jump animation states
 - Dash effect with multi-block color trail
 - Pixel-art platforms + ground
+- Two level definitions (`meadow-1`, `canyon-2`) with start/end points
+- Pixel-art obstacles (spikes), platform gaps, and star collectibles
 - Pixel-art sky with animated clouds
 - Input remains isolated in `src/core/input.js`
 
