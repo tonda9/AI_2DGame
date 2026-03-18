@@ -30,6 +30,8 @@ jobs:
           cp index.html dist/index.html
           cp style.css dist/style.css
           cp -r src dist/src
+          if [ -d assets ]; then cp -r assets dist/assets; fi
+          touch dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

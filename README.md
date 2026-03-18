@@ -44,6 +44,8 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 1. Push to `main`.
 2. In GitHub repo settings, ensure **Pages** source is set to **GitHub Actions**.
 3. The workflow `.github/workflows/deploy-pages.yml` deploys `index.html`, `style.css`, and `src/`.
+   - Optional `assets/` is also included automatically when present.
+   - A `.nojekyll` file is generated in the artifact to avoid Pages processing issues.
 4. Preview URL will be:
    `https://<your-username>.github.io/AI_2DGame/`
 
