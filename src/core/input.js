@@ -2,7 +2,7 @@ const ACTION_KEYS = {
   left: ['ArrowLeft', 'KeyA'],
   right: ['ArrowRight', 'KeyD'],
   jump: ['Space', 'KeyW', 'ArrowUp'],
-  dash: ['ShiftLeft', 'ShiftRight', 'KeyX'],
+  dash: ['ShiftLeft', 'ShiftRight', 'KeyX', 'KeyZ'],
   switchLevel: ['KeyL'],
 };
 

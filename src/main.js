@@ -42,6 +42,7 @@ const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
 let dashDirection = 1;
+let dashAvailable = true;
 let grounded = false;
 let coyoteTimer = 0;
 let jumpBufferTimer = 0;
@@ -104,6 +105,7 @@ function resetPlayerToStart() {
   player.vx = 0;
   player.vy = 0;
   dashTimer = 0;
+  dashAvailable = true;
 }
 
 function setLevel(index) {
@@ -224,9 +226,10 @@ function update() {
   const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
     && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
-  if (pressDash) {
+  if (pressDash && !grounded && dashAvailable) {
     dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
+    dashAvailable = false;
   }
 
   if (dashTimer > 0) {
@@ -269,6 +272,7 @@ function update() {
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
+  if (grounded) dashAvailable = true;
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }

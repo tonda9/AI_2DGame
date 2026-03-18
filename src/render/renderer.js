@@ -146,11 +146,14 @@ function drawPlayer(ctx, state) {
   const isJumping = !state.grounded && state.velocityY < 0;
   const isFalling = !state.grounded && state.velocityY >= 0;
   const isDashing = state.dashActive;
+  const isIdle = state.grounded && Math.abs(state.player.vx) <= 0.2 && !isDashing;
   const walkPhase = Math.floor(state.walkCycle / 6) % 2;
+  const idlePhase = Math.floor(state.frameCount / 20) % 2;
+  const isBlinkFrame = isIdle && Math.floor(state.frameCount / 40) % 8 === 0;
   const facing = isDashing ? state.dashDirection : state.facing;
 
   const mapX = (x, w) => (facing === 1 ? x : SPRITE_WIDTH_BLOCKS - x - w);
-  const spriteY = py + (isJumping ? -2 : 0) + (isDashing ? -1 : 0);
+  const spriteY = py + (isJumping ? -2 : 0) + (isDashing ? -1 : 0) + (isIdle && idlePhase ? -1 : 0);
 
   const bodyBlocks = [
     [1, 1, 5, 1],
@@ -167,16 +170,16 @@ function drawPlayer(ctx, state) {
     drawPixelRect(ctx, px + mapX(x, w) * block, spriteY + y * block, w * block, h * block, body);
   }
 
-  const backLegY = isJumping || isDashing ? 6 : walkPhase ? 6 : 5;
-  const frontLegY = isJumping || isDashing ? 6 : walkPhase ? 5 : 6;
+  const backLegY = isJumping || isDashing ? 6 : isIdle ? (5 + idlePhase) : walkPhase ? 6 : 5;
+  const frontLegY = isJumping || isDashing ? 6 : isIdle ? (6 - idlePhase) : walkPhase ? 5 : 6;
   drawPixelRect(ctx, px + mapX(2, 1) * block, spriteY + backLegY * block, block, block, dashTrim);
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + frontLegY * block, block, block, dashTrim);
 
-  const tailY = isFalling ? 4 : 5;
+  const tailY = isFalling ? 4 : isIdle ? (5 + idlePhase) : 5;
   const tailColor = isDashing ? '#9afdf4' : '#3f9152';
   drawPixelRect(ctx, px + mapX(0, 2) * block, spriteY + tailY * block, 2 * block, block, tailColor);
-  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, block, block, '#fff');
-  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, 2, 2, '#111');
+  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, block, isBlinkFrame ? 2 : block, '#fff');
+  if (!isBlinkFrame) drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, 2, 2, '#111');
   drawPixelRect(ctx, px + mapX(7, 1) * block, spriteY + 4 * block, block, block, '#9f6c3f');
 }
 
