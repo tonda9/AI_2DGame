@@ -64,10 +64,12 @@ function drawCollectible(ctx, collectible) {
 
 function drawBoostPad(ctx, mapElement, frameCount) {
   const pulse = Math.floor(frameCount / 8) % 2;
+  const pulseWidth = Math.max(2, mapElement.width - 8);
+  const pulseX = mapElement.x + Math.floor((mapElement.width - pulseWidth) / 2);
   drawPixelRect(ctx, mapElement.x, mapElement.y, mapElement.width, mapElement.height, '#505860');
   drawPixelRect(ctx, mapElement.x + 2, mapElement.y + 2, mapElement.width - 4, mapElement.height - 4, '#7bf6ff');
   if (pulse) {
-    drawPixelRect(ctx, mapElement.x + 4, mapElement.y - 2, mapElement.width - 8, 2, '#d9ffff');
+    drawPixelRect(ctx, pulseX, mapElement.y - 2, pulseWidth, 2, '#d9ffff');
   }
 }
 
