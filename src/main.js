@@ -20,6 +20,7 @@ const gravity = 0.45;
 const jumpVelocity = -8.5;
 const dashSpeed = 7;
 const WALK_CYCLE_FRAMES = 24;
+const FALL_RESPAWN_THRESHOLD = 120;
 let dashTimer = 0;
 let grounded = false;
 let walkCycle = 0;
@@ -121,7 +122,7 @@ function update() {
 
   player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
 
-  if (player.y > canvas.height + 120) resetPlayerToStart();
+  if (player.y > canvas.height + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
 
   for (const obstacle of level.obstacles) {
     if (intersects(player, obstacle)) {
