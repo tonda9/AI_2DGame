@@ -1,5 +1,9 @@
 const HUD_FONT = '14px monospace';
 const SPRITE_WIDTH_BLOCKS = 8;
+const BOOST_PAD_INSET = 2;
+const BOOST_PAD_PULSE_INSET_MULTIPLIER = 4;
+const BOOST_PAD_MIN_PULSE_WIDTH = 2;
+const BOOST_PAD_PULSE_FRAME_DIVISOR = 8;
 
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -63,18 +67,31 @@ function drawCollectible(ctx, collectible) {
 }
 
 function drawBoostPad(ctx, mapElement, frameCount) {
-  const pulse = Math.floor(frameCount / 8) % 2;
-  const pulseWidth = Math.max(2, mapElement.width - 8);
+  const pulse = Math.floor(frameCount / BOOST_PAD_PULSE_FRAME_DIVISOR) % 2;
+  const pulseWidth = Math.max(
+    BOOST_PAD_MIN_PULSE_WIDTH,
+    mapElement.width - BOOST_PAD_INSET * BOOST_PAD_PULSE_INSET_MULTIPLIER,
+  );
   const pulseX = mapElement.x + Math.floor((mapElement.width - pulseWidth) / 2);
   drawPixelRect(ctx, mapElement.x, mapElement.y, mapElement.width, mapElement.height, '#505860');
-  drawPixelRect(ctx, mapElement.x + 2, mapElement.y + 2, mapElement.width - 4, mapElement.height - 4, '#7bf6ff');
+  drawPixelRect(
+    ctx,
+    mapElement.x + BOOST_PAD_INSET,
+    mapElement.y + BOOST_PAD_INSET,
+    mapElement.width - BOOST_PAD_INSET * 2,
+    mapElement.height - BOOST_PAD_INSET * 2,
+    '#7bf6ff',
+  );
   if (pulse) {
     drawPixelRect(ctx, pulseX, mapElement.y - 2, pulseWidth, 2, '#d9ffff');
   }
 }
 
 function drawMapElement(ctx, mapElement, frameCount) {
-  if (mapElement.type === 'boostPad') drawBoostPad(ctx, mapElement, frameCount);
+  if (mapElement.type === 'boostPad') {
+    drawBoostPad(ctx, mapElement, frameCount);
+    return;
+  }
 }
 
 function drawStartMarker(ctx, start) {
@@ -163,7 +180,7 @@ export function renderScene(ctx, canvas, state) {
   for (const collectible of state.collectibles) {
     if (!collectible.collected) drawCollectible(ctx, collectible);
   }
-  for (const mapElement of state.mapElements) drawMapElement(ctx, mapElement, state.frameCount);
+  for (const mapElement of state.mapElements || []) drawMapElement(ctx, mapElement, state.frameCount);
   drawDashTrail(ctx, state);
   drawPlayer(ctx, state);
 

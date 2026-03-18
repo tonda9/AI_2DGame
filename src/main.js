@@ -23,7 +23,7 @@ const jumpVelocity = -8.5;
 const dashSpeed = 7;
 const WALK_CYCLE_FRAMES = 24;
 const FALL_RESPAWN_THRESHOLD = 120;
-const BOOST_PAD_COLLISION_TOLERANCE = 2;
+const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
@@ -84,12 +84,12 @@ function isOnGround() {
   });
 }
 
-function applyMapElementInteractions(previousY) {
-  for (const mapElement of level.mapElements) {
+function applyMapElementInteractions(playerPreviousY) {
+  for (const mapElement of level.mapElements || []) {
     if (mapElement.type !== 'boostPad') continue;
-    const topEdge = mapElement.y - BOOST_PAD_COLLISION_TOLERANCE;
-    const wasAbove = previousY + player.height <= topEdge;
-    const nowTouching = player.y + player.height >= topEdge;
+    const triggerEdgeY = mapElement.y - BOOST_PAD_TRIGGER_OFFSET_PX;
+    const wasAbove = playerPreviousY + player.height <= triggerEdgeY;
+    const nowTouching = player.y + player.height >= triggerEdgeY;
     if (wasAbove && nowTouching && overlapsX(player, mapElement)) {
       const forceY = mapElement.forceY ?? DEFAULT_BOOST_FORCE_Y;
       const forceX = mapElement.forceX ?? DEFAULT_BOOST_FORCE_X;

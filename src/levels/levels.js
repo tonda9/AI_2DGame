@@ -14,7 +14,6 @@ export const LEVELS = [
       { x: 245, y: 215, width: 12, height: 12 },
       { x: 510, y: 165, width: 12, height: 12 },
     ],
-    mapElements: [],
   },
   {
     id: 'canyon-2',
@@ -38,7 +37,6 @@ export const LEVELS = [
       { x: 316, y: 190, width: 12, height: 12 },
       { x: 520, y: 140, width: 12, height: 12 },
     ],
-    mapElements: [],
   },
   {
     id: 'blackhole-3',
