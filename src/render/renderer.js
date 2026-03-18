@@ -4,6 +4,10 @@ const BOOST_PAD_INSET = 2;
 const BOOST_PAD_PULSE_INSET_MULTIPLIER = 4;
 const BOOST_PAD_MIN_PULSE_WIDTH = 2;
 const BOOST_PAD_PULSE_FRAME_DIVISOR = 8;
+const IDLE_VELOCITY_THRESHOLD = 0.2;
+const IDLE_SWAY_FRAME_DIVISOR = 20;
+const BLINK_FRAME_DIVISOR = 40;
+const BLINK_FRAME_WINDOW = 8;
 
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -146,10 +150,10 @@ function drawPlayer(ctx, state) {
   const isJumping = !state.grounded && state.velocityY < 0;
   const isFalling = !state.grounded && state.velocityY >= 0;
   const isDashing = state.dashActive;
-  const isIdle = state.grounded && Math.abs(state.player.vx) <= 0.2 && !isDashing;
+  const isIdle = state.grounded && Math.abs(state.player.vx) <= IDLE_VELOCITY_THRESHOLD && !isDashing;
   const walkPhase = Math.floor(state.walkCycle / 6) % 2;
-  const idlePhase = Math.floor(state.frameCount / 20) % 2;
-  const isBlinkFrame = isIdle && Math.floor(state.frameCount / 40) % 8 === 0;
+  const idlePhase = Math.floor(state.frameCount / IDLE_SWAY_FRAME_DIVISOR) % 2;
+  const isBlinkFrame = isIdle && Math.floor(state.frameCount / BLINK_FRAME_DIVISOR) % BLINK_FRAME_WINDOW === 0;
   const facing = isDashing ? state.dashDirection : state.facing;
 
   const mapX = (x, w) => (facing === 1 ? x : SPRITE_WIDTH_BLOCKS - x - w);
@@ -170,8 +174,21 @@ function drawPlayer(ctx, state) {
     drawPixelRect(ctx, px + mapX(x, w) * block, spriteY + y * block, w * block, h * block, body);
   }
 
-  const backLegY = isJumping || isDashing ? 6 : isIdle ? (5 + idlePhase) : walkPhase ? 6 : 5;
-  const frontLegY = isJumping || isDashing ? 6 : isIdle ? (6 - idlePhase) : walkPhase ? 5 : 6;
+  let backLegY;
+  let frontLegY;
+  if (isJumping || isDashing) {
+    backLegY = 6;
+    frontLegY = 6;
+  } else if (isIdle) {
+    backLegY = 5 + idlePhase;
+    frontLegY = 6 - idlePhase;
+  } else if (walkPhase) {
+    backLegY = 6;
+    frontLegY = 5;
+  } else {
+    backLegY = 5;
+    frontLegY = 6;
+  }
   drawPixelRect(ctx, px + mapX(2, 1) * block, spriteY + backLegY * block, block, block, dashTrim);
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + frontLegY * block, block, block, dashTrim);
 

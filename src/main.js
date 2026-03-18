@@ -226,10 +226,10 @@ function update() {
   const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
     && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
-  if (pressDash && !grounded && dashAvailable) {
+  if (pressDash && (grounded || dashAvailable)) {
     dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
-    dashAvailable = false;
+    if (!grounded) dashAvailable = false;
   }
 
   if (dashTimer > 0) {
