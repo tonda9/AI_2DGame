@@ -7,6 +7,7 @@ const ACTION_KEYS = {
 
 export class Input {
   constructor(target = window) {
+    this.target = target;
     this.down = new Set();
     this.pressed = new Set();
     this.keyToAction = new Map();
@@ -18,6 +19,7 @@ export class Input {
     this.onKeyDown = (event) => {
       const action = this.keyToAction.get(event.code);
       if (!action) return;
+      event.preventDefault();
       if (!this.down.has(action)) this.pressed.add(action);
       this.down.add(action);
     };
@@ -25,11 +27,12 @@ export class Input {
     this.onKeyUp = (event) => {
       const action = this.keyToAction.get(event.code);
       if (!action) return;
+      event.preventDefault();
       this.down.delete(action);
     };
 
-    target.addEventListener('keydown', this.onKeyDown);
-    target.addEventListener('keyup', this.onKeyUp);
+    this.target.addEventListener('keydown', this.onKeyDown);
+    this.target.addEventListener('keyup', this.onKeyUp);
   }
 
   isDown(action) {
@@ -42,5 +45,10 @@ export class Input {
 
   endFrame() {
     this.pressed.clear();
+  }
+
+  destroy() {
+    this.target.removeEventListener('keydown', this.onKeyDown);
+    this.target.removeEventListener('keyup', this.onKeyUp);
   }
 }
