@@ -21,12 +21,14 @@ const speed = 2;
 const gravity = 0.45;
 const jumpVelocity = -8.5;
 const dashSpeed = 7;
+const dashFrames = 8;
 const WALK_CYCLE_FRAMES = 24;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
+let dashDirection = 1;
 let grounded = false;
 let walkCycle = 0;
 let frameCount = 0;
@@ -44,8 +46,28 @@ function overlapsX(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x;
 }
 
+function overlapsY(a, b) {
+  return a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
 function intersects(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
+
+function resolveEntityRect(entity) {
+  return {
+    x: entity.currentX ?? entity.x,
+    y: entity.currentY ?? entity.y,
+    width: entity.width,
+    height: entity.height,
+  };
+}
+
+function getSolidPlatforms() {
+  const movingPlatforms = (level.mapElements || [])
+    .filter((mapElement) => mapElement.type === 'movingPlatform')
+    .map(resolveEntityRect);
+  return [...level.platforms, ...movingPlatforms];
 }
 
 function resetPlayerToStart() {
@@ -63,7 +85,7 @@ function setLevel(index) {
 }
 
 function resolveVerticalCollisions(previousY) {
-  for (const platform of level.platforms) {
+  for (const platform of getSolidPlatforms()) {
     const wasAbove = previousY + player.height <= platform.y;
     const nowCrossedTop = player.y + player.height >= platform.y;
     if (wasAbove && nowCrossedTop && overlapsX(player, platform)) {
@@ -77,7 +99,7 @@ function resolveVerticalCollisions(previousY) {
 
 function isOnGround() {
   const probe = { ...player, y: player.y + 1 };
-  return level.platforms.some((platform) => {
+  return getSolidPlatforms().some((platform) => {
     const touchingTop = probe.y + probe.height >= platform.y;
     const currentlyAboveTop = player.y + player.height <= platform.y + 1;
     return overlapsX(probe, platform) && touchingTop && currentlyAboveTop;
@@ -87,13 +109,14 @@ function isOnGround() {
 function applyMapElementInteractions(playerPreviousY) {
   for (const mapElement of level.mapElements || []) {
     if (mapElement.type !== 'boostPad') continue;
-    const triggerEdgeY = mapElement.y - BOOST_PAD_TRIGGER_OFFSET_PX;
+    const mapRect = resolveEntityRect(mapElement);
+    const triggerEdgeY = mapRect.y - BOOST_PAD_TRIGGER_OFFSET_PX;
     const wasAbove = playerPreviousY + player.height <= triggerEdgeY;
     const nowTouching = player.y + player.height >= triggerEdgeY;
-    if (wasAbove && nowTouching && overlapsX(player, mapElement)) {
+    if (wasAbove && nowTouching && overlapsX(player, mapRect)) {
       const forceY = mapElement.forceY ?? DEFAULT_BOOST_FORCE_Y;
       const forceX = mapElement.forceX ?? DEFAULT_BOOST_FORCE_X;
-      player.y = mapElement.y - player.height;
+      player.y = mapRect.y - player.height;
       player.vy = forceY;
       player.vx += forceX;
       break;
@@ -101,8 +124,46 @@ function applyMapElementInteractions(playerPreviousY) {
   }
 }
 
+function updateDynamicEntities() {
+  const applyMotion = (entity) => {
+    if (!entity.range || !entity.speed) return;
+    if (entity.baseX === undefined) entity.baseX = entity.x;
+    if (entity.baseY === undefined) entity.baseY = entity.y;
+    const axis = entity.axis === 'y' ? 'y' : 'x';
+    const offset = Math.sin(frameCount * entity.speed) * entity.range;
+    entity.currentX = axis === 'x' ? entity.baseX + offset : entity.baseX;
+    entity.currentY = axis === 'y' ? entity.baseY + offset : entity.baseY;
+  };
+
+  for (const obstacle of level.obstacles) {
+    if (obstacle.type === 'movingSpike') applyMotion(obstacle);
+  }
+  for (const mapElement of level.mapElements || []) {
+    if (mapElement.type === 'movingPlatform') applyMotion(mapElement);
+  }
+}
+
+function movePlayerHorizontally(distance) {
+  if (distance === 0) return;
+  const direction = Math.sign(distance);
+  let remaining = Math.abs(distance);
+  while (remaining > 0) {
+    const step = Math.min(1, remaining);
+    player.x += step * direction;
+    const hitSolid = getSolidPlatforms().some((platform) => intersects(player, platform) && overlapsY(player, platform));
+    if (hitSolid) {
+      player.x -= step * direction;
+      player.vx = 0;
+      dashTimer = 0;
+      break;
+    }
+    remaining -= step;
+  }
+}
+
 function update() {
   frameCount += 1;
+  updateDynamicEntities();
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
   const pressJump = input.isPressed('jump');
@@ -122,14 +183,15 @@ function update() {
   }
 
   if (pressDash) {
-    dashTimer = 8;
+    dashDirection = holdLeft ? -1 : holdRight ? 1 : player.facing;
+    dashTimer = dashFrames;
   }
 
   if (dashTimer > 0) {
     dashTimer -= 1;
     if (holdLeft) player.vx = -dashSpeed;
     else if (holdRight) player.vx = dashSpeed;
-    else player.vx = player.facing * dashSpeed;
+    else player.vx = dashDirection * dashSpeed;
   }
 
   if (pressJump && isOnGround()) {
@@ -138,7 +200,7 @@ function update() {
 
   player.vy += gravity;
   const previousY = player.y;
-  player.x += player.vx;
+  movePlayerHorizontally(player.vx);
   player.y += player.vy;
 
   const landed = resolveVerticalCollisions(previousY);
@@ -154,7 +216,7 @@ function update() {
   if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
 
   for (const obstacle of level.obstacles) {
-    if (intersects(player, obstacle)) {
+    if (intersects(player, resolveEntityRect(obstacle))) {
       resetPlayerToStart();
       break;
     }
@@ -186,6 +248,7 @@ function draw() {
     grounded,
     walkCycle,
     facing: player.facing,
+    dashDirection,
     frameCount,
     velocityY: player.vy,
     worldWidth: WORLD_WIDTH,

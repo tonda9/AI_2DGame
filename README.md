@@ -30,8 +30,8 @@ AI_2DGame/
 - Walk/jump animation states
 - Dash effect with multi-block color trail
 - Pixel-art platforms + ground
-- Three level definitions (`meadow-1`, `canyon-2`, `blackhole-3`) with start/end points
-- Pixel-art obstacles (spikes), platform gaps, boost pads, and star collectibles
+- Four level definitions (`meadow-1`, `canyon-2`, `blackhole-3`, `rift-4`) with start/end points
+- Pixel-art obstacles (spikes + moving spikes), platform gaps, boost pads, moving platforms, and star collectibles
 - Pixel-art sky with animated clouds
 - Input remains isolated in `src/core/input.js`
 
@@ -76,5 +76,5 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 
 - Double-click `index.html` to open directly in a browser, or
 - serve with any static server (optional), e.g. `python3 -m http.server`.
-- The canvas now auto-resizes to full browser window and scales the 640x360 world to fit.
-- Press `L` to switch levels until `blackhole-3` to test dash + collectibles + boost-pad routes.
+- Resize the browser window to verify the canvas fills the screen while preserving the 640x360 letterboxed world.
+- Press `L` to switch levels until `rift-4` to test dash trail/flash, collectibles, moving spikes, boost pads, and moving platforms.
