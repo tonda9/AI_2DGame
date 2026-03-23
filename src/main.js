@@ -41,6 +41,10 @@ const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
+const SPIKE_HITBOX_INSET_X = 2;
+const SPIKE_HITBOX_INSET_TOP = 1;
+const SPIKE_HITBOX_INSET_BOTTOM = 1;
+const MIN_HITBOX_SIZE = 1;
 let dashTimer = 0;
 let dashDirection = 1;
 let canDash = true;
@@ -95,14 +99,23 @@ function resolveEntityRect(entity) {
   };
 }
 
+/**
+ * Returns the collision hitbox for an obstacle.
+ * Spike hitboxes are inset slightly to avoid unfair edge-contact deaths.
+ */
 function resolveObstacleHitbox(obstacle) {
   const rect = resolveEntityRect(obstacle);
   if (obstacle.type === 'spike' || obstacle.type === 'movingSpike') {
+    const availableInsetXPerSide = Math.max(0, Math.floor((rect.width - MIN_HITBOX_SIZE) / 2));
+    const appliedInsetX = Math.min(SPIKE_HITBOX_INSET_X, availableInsetXPerSide);
+    const availableInsetYTotal = Math.max(0, rect.height - MIN_HITBOX_SIZE);
+    const appliedInsetTop = Math.min(SPIKE_HITBOX_INSET_TOP, Math.floor(availableInsetYTotal / 2));
+    const appliedInsetBottom = Math.min(SPIKE_HITBOX_INSET_BOTTOM, availableInsetYTotal - appliedInsetTop);
     return {
-      x: rect.x + 2,
-      y: rect.y + 1,
-      width: Math.max(1, rect.width - 4),
-      height: Math.max(1, rect.height - 2),
+      x: rect.x + appliedInsetX,
+      y: rect.y + appliedInsetTop,
+      width: Math.max(MIN_HITBOX_SIZE, rect.width - appliedInsetX * 2),
+      height: Math.max(MIN_HITBOX_SIZE, rect.height - appliedInsetTop - appliedInsetBottom),
     };
   }
   return rect;
@@ -371,26 +384,22 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+function requestFullscreenIfNeeded() {
+  if (document.fullscreenElement) {
+    window.removeEventListener('pointerdown', requestFullscreenIfNeeded);
+    return;
+  }
+  document.documentElement.requestFullscreen()
+    .then(() => window.removeEventListener('pointerdown', requestFullscreenIfNeeded))
+    .catch((err) => {
+      console.warn('Fullscreen request failed (usually blocked without a user gesture):', err);
+      window.removeEventListener('pointerdown', requestFullscreenIfNeeded);
+    });
+}
+
 window.addEventListener('resize', resizeCanvas);
 document.addEventListener('fullscreenchange', resizeCanvas);
-window.addEventListener(
-  'keydown',
-  () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-  },
-  { once: true },
-);
-window.addEventListener(
-  'pointerdown',
-  () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }
-  },
-  { once: true },
-);
+window.addEventListener('pointerdown', requestFullscreenIfNeeded);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);
