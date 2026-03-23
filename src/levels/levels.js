@@ -1,226 +1,197 @@
-export const LEVELS = [
+const WORLD_WIDTH = 640;
+const GROUND_Y = 320;
+const GROUND_HEIGHT = 40;
+
+/**
+ * Chapter-first level source of truth.
+ * Add new chapters here and LEVELS is derived automatically.
+ */
+const CHAPTER_DEFINITIONS = [
   {
-    id: 'meadow-1',
-    backgroundVariant: 'day',
-    start: { x: 120, y: 180 },
-    end: { x: 596, y: 155, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 640, height: 40 },
-      { x: 180, y: 245, width: 170, height: 20 },
-      { x: 420, y: 195, width: 160, height: 20 },
-    ],
-    obstacles: [{ type: 'spike', x: 360, y: 304, width: 28, height: 16 }],
-    collectibles: [
-      { x: 245, y: 215, width: 12, height: 12 },
-      { x: 510, y: 165, width: 12, height: 12 },
-    ],
+    chapter: 1,
+    id: 'chapter-1',
+    name: 'Primeval Meadows',
+    backgroundCycle: ['day', 'dusk', 'day', 'dusk', 'night'],
   },
   {
-    id: 'canyon-2',
-    backgroundVariant: 'dusk',
-    start: { x: 24, y: 278 },
-    end: { x: 604, y: 125, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 160, height: 40 },
-      { x: 230, y: 320, width: 150, height: 40 },
-      { x: 450, y: 320, width: 190, height: 40 },
-      { x: 110, y: 260, width: 90, height: 18 },
-      { x: 260, y: 220, width: 110, height: 18 },
-      { x: 440, y: 170, width: 130, height: 18 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 282, y: 204, width: 24, height: 16 },
-      { type: 'spike', x: 498, y: 154, width: 24, height: 16 },
-    ],
-    collectibles: [
-      { x: 142, y: 230, width: 12, height: 12 },
-      { x: 316, y: 190, width: 12, height: 12 },
-      { x: 520, y: 140, width: 12, height: 12 },
-    ],
+    chapter: 2,
+    id: 'chapter-2',
+    name: 'Crystal Caves',
+    backgroundCycle: ['dusk', 'night', 'void', 'night', 'dusk'],
   },
   {
-    id: 'blackhole-3',
-    backgroundVariant: 'dusk',
-    start: { x: 20, y: 278 },
-    end: { x: 606, y: 86, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 120, height: 40 },
-      { x: 170, y: 320, width: 110, height: 40 },
-      { x: 330, y: 320, width: 130, height: 40 },
-      { x: 510, y: 320, width: 130, height: 40 },
-      { x: 92, y: 258, width: 88, height: 18 },
-      { x: 230, y: 218, width: 96, height: 18 },
-      { x: 372, y: 176, width: 94, height: 18 },
-      { x: 516, y: 132, width: 100, height: 18 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 132, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 292, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 474, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 404, y: 160, width: 24, height: 16 },
-    ],
-    collectibles: [
-      { x: 116, y: 228, width: 12, height: 12 },
-      { x: 258, y: 188, width: 12, height: 12 },
-      { x: 404, y: 146, width: 12, height: 12 },
-      { x: 548, y: 102, width: 12, height: 12 },
-    ],
-    mapElements: [
-      { type: 'boostPad', x: 108, y: 246, width: 24, height: 8, forceY: -10.5, forceX: 0 },
-      { type: 'boostPad', x: 242, y: 206, width: 24, height: 8, forceY: -10, forceX: 1.2 },
-      { type: 'boostPad', x: 530, y: 120, width: 24, height: 8, forceY: -9.5, forceX: 1.1 },
-    ],
-  },
-  {
-    id: 'rift-4',
-    backgroundVariant: 'dusk',
-    start: { x: 24, y: 278 },
-    end: { x: 600, y: 66, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 120, height: 40 },
-      { x: 184, y: 320, width: 96, height: 40 },
-      { x: 340, y: 320, width: 96, height: 40 },
-      { x: 496, y: 320, width: 144, height: 40 },
-      { x: 72, y: 264, width: 84, height: 16 },
-      { x: 238, y: 226, width: 80, height: 16 },
-      { x: 390, y: 188, width: 80, height: 16 },
-      { x: 532, y: 146, width: 86, height: 16 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 138, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 296, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 454, y: 304, width: 24, height: 16 },
-      { type: 'movingSpike', x: 268, y: 210, width: 24, height: 16, axis: 'x', range: 32, speed: 0.08 },
-      { type: 'movingSpike', x: 558, y: 130, width: 24, height: 16, axis: 'y', range: 18, speed: 0.09 },
-    ],
-    collectibles: [
-      { x: 106, y: 236, width: 12, height: 12 },
-      { x: 272, y: 198, width: 12, height: 12 },
-      { x: 428, y: 160, width: 12, height: 12 },
-      { x: 574, y: 118, width: 12, height: 12 },
-    ],
-    mapElements: [
-      { type: 'boostPad', x: 90, y: 252, width: 24, height: 8, forceY: -10.3, forceX: 0.8 },
-      { type: 'movingPlatform', x: 156, y: 248, width: 72, height: 12, axis: 'x', range: 50, speed: 0.05 },
-      { type: 'movingPlatform', x: 312, y: 206, width: 72, height: 12, axis: 'y', range: 28, speed: 0.045 },
-    ],
-  },
-  {
-    id: 'clifftop-5',
-    backgroundVariant: 'night',
-    start: { x: 24, y: 278 },
-    end: { x: 606, y: 60, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 110, height: 40 },
-      { x: 180, y: 320, width: 100, height: 40 },
-      { x: 350, y: 320, width: 100, height: 40 },
-      { x: 510, y: 320, width: 130, height: 40 },
-      { x: 60, y: 270, width: 80, height: 16 },
-      { x: 230, y: 238, width: 80, height: 16 },
-      { x: 390, y: 200, width: 78, height: 16 },
-      { x: 524, y: 155, width: 90, height: 16 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 124, y: 304, width: 32, height: 16 },
-      { type: 'spike', x: 302, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 462, y: 304, width: 24, height: 16 },
-      { type: 'movingSpike', x: 248, y: 222, width: 24, height: 16, axis: 'x', range: 36, speed: 0.09 },
-      { type: 'movingSpike', x: 540, y: 139, width: 24, height: 16, axis: 'y', range: 16, speed: 0.1 },
-    ],
-    collectibles: [
-      { x: 92, y: 242, width: 12, height: 12 },
-      { x: 262, y: 210, width: 12, height: 12 },
-      { x: 418, y: 172, width: 12, height: 12 },
-      { x: 556, y: 127, width: 12, height: 12 },
-    ],
-    mapElements: [
-      { type: 'boostPad', x: 76, y: 258, width: 24, height: 8, forceY: -10.8, forceX: 0.6 },
-      { type: 'movingPlatform', x: 160, y: 278, width: 68, height: 12, axis: 'x', range: 44, speed: 0.045 },
-      { type: 'movingPlatform', x: 320, y: 234, width: 68, height: 12, axis: 'y', range: 24, speed: 0.05 },
-    ],
-  },
-  {
-    id: 'abyss-6',
-    backgroundVariant: 'night',
-    start: { x: 20, y: 265 },
-    end: { x: 610, y: 40, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 90, height: 40 },
-      { x: 160, y: 320, width: 80, height: 40 },
-      { x: 310, y: 320, width: 80, height: 40 },
-      { x: 470, y: 320, width: 170, height: 40 },
-      { x: 40, y: 270, width: 70, height: 14 },
-      { x: 192, y: 240, width: 66, height: 14 },
-      { x: 346, y: 205, width: 66, height: 14 },
-      { x: 498, y: 165, width: 70, height: 14 },
-      { x: 552, y: 110, width: 66, height: 14 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 104, y: 304, width: 32, height: 16 },
-      { type: 'spike', x: 264, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 420, y: 304, width: 24, height: 16 },
-      { type: 'movingSpike', x: 212, y: 224, width: 24, height: 16, axis: 'x', range: 44, speed: 0.1 },
-      { type: 'movingSpike', x: 366, y: 189, width: 24, height: 16, axis: 'x', range: 36, speed: 0.11 },
-      { type: 'movingSpike', x: 566, y: 94, width: 24, height: 16, axis: 'y', range: 16, speed: 0.12 },
-    ],
-    collectibles: [
-      { x: 68, y: 242, width: 12, height: 12 },
-      { x: 218, y: 212, width: 12, height: 12 },
-      { x: 372, y: 177, width: 12, height: 12 },
-      { x: 524, y: 137, width: 12, height: 12 },
-      { x: 576, y: 82, width: 12, height: 12 },
-    ],
-    mapElements: [
-      { type: 'boostPad', x: 56, y: 258, width: 24, height: 8, forceY: -10.5, forceX: 0.6 },
-      { type: 'boostPad', x: 564, y: 153, width: 24, height: 8, forceY: -10, forceX: 0 },
-      { type: 'movingPlatform', x: 130, y: 268, width: 60, height: 12, axis: 'x', range: 40, speed: 0.04 },
-      { type: 'movingPlatform', x: 286, y: 230, width: 60, height: 12, axis: 'x', range: 36, speed: 0.05 },
-      { type: 'movingPlatform', x: 440, y: 194, width: 60, height: 12, axis: 'y', range: 28, speed: 0.05 },
-    ],
-  },
-  {
-    id: 'singularity-7',
-    backgroundVariant: 'void',
-    start: { x: 18, y: 260 },
-    end: { x: 586, y: 40, width: 16, height: 40 },
-    platforms: [
-      { x: 0, y: 320, width: 80, height: 40 },
-      { x: 150, y: 320, width: 70, height: 40 },
-      { x: 296, y: 320, width: 70, height: 40 },
-      { x: 452, y: 320, width: 188, height: 40 },
-      { x: 30, y: 272, width: 60, height: 12 },
-      { x: 180, y: 248, width: 56, height: 12 },
-      { x: 330, y: 218, width: 54, height: 12 },
-      { x: 478, y: 182, width: 56, height: 12 },
-      { x: 552, y: 136, width: 56, height: 12 },
-      { x: 476, y: 86, width: 56, height: 12 },
-      { x: 566, y: 60, width: 56, height: 12 },
-    ],
-    obstacles: [
-      { type: 'spike', x: 98, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 250, y: 304, width: 24, height: 16 },
-      { type: 'spike', x: 402, y: 304, width: 24, height: 16 },
-      { type: 'movingSpike', x: 194, y: 232, width: 24, height: 16, axis: 'x', range: 40, speed: 0.1 },
-      { type: 'movingSpike', x: 344, y: 202, width: 24, height: 16, axis: 'x', range: 36, speed: 0.11 },
-      { type: 'movingSpike', x: 492, y: 166, width: 24, height: 16, axis: 'y', range: 20, speed: 0.12 },
-      { type: 'movingSpike', x: 562, y: 120, width: 24, height: 16, axis: 'x', range: 28, speed: 0.13 },
-    ],
-    collectibles: [
-      { x: 50, y: 244, width: 12, height: 12 },
-      { x: 200, y: 220, width: 12, height: 12 },
-      { x: 350, y: 190, width: 12, height: 12 },
-      { x: 496, y: 154, width: 12, height: 12 },
-      { x: 572, y: 108, width: 12, height: 12 },
-    ],
-    mapElements: [
-      { type: 'boostPad', x: 46, y: 260, width: 24, height: 8, forceY: -10.5, forceX: 0.5 },
-      { type: 'boostPad', x: 490, y: 170, width: 24, height: 8, forceY: -10.5, forceX: 1.0 },
-      { type: 'movingPlatform', x: 118, y: 284, width: 56, height: 12, axis: 'x', range: 38, speed: 0.045 },
-      { type: 'movingPlatform', x: 260, y: 256, width: 56, height: 12, axis: 'y', range: 28, speed: 0.055 },
-      { type: 'movingPlatform', x: 414, y: 220, width: 54, height: 12, axis: 'x', range: 34, speed: 0.06 },
-    ],
+    chapter: 3,
+    id: 'chapter-3',
+    name: 'Void Peaks',
+    backgroundCycle: ['night', 'void', 'night', 'void', 'night'],
   },
 ];
+
+const SECRET_LEVEL_KEYS = new Set(['1-3', '1-7', '2-2', '2-6', '2-9', '3-1', '3-5', '3-8', '3-10']);
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+function createBasePlatforms(globalLevelIndex) {
+  const layoutType = globalLevelIndex % 3;
+  const steps = 4 + Math.floor(globalLevelIndex / 4);
+  const yStepByLayout = [24, 26, 22];
+  const yStep = yStepByLayout[layoutType] ?? 24;
+  const platforms = [{ x: 0, y: GROUND_Y, width: WORLD_WIDTH, height: GROUND_HEIGHT }];
+
+  for (let i = 0; i < steps; i += 1) {
+    let wobble = 0;
+    if (layoutType === 1) {
+      wobble = i % 2 === 0 ? -12 : 12;
+    } else if (layoutType === 2) {
+      wobble = ((i % 3) - 1) * 8;
+    }
+    const x = 78 + i * 86 + wobble;
+    const y = clamp(274 - i * yStep + (globalLevelIndex % 4), 72, 286);
+    const width = clamp(88 - Math.floor(globalLevelIndex / 5) * 4 + ((i % 2) ? -6 : 6), 52, 98);
+
+    if (x + width < WORLD_WIDTH - 10) {
+      platforms.push({ x, y, width, height: 14 });
+    }
+  }
+
+  return platforms;
+}
+
+function createObstacles(chapterIndex, levelInChapter, globalLevelIndex) {
+  const obstacleCount = Math.min(9, 1 + Math.floor(globalLevelIndex / 3) + chapterIndex * 2 + (levelInChapter > 7 ? 1 : 0));
+  const movingCount = Math.min(obstacleCount - 1, Math.floor(globalLevelIndex / 5) + chapterIndex);
+  const staticCount = obstacleCount - movingCount;
+  const obstacles = [];
+
+  for (let i = 0; i < staticCount; i += 1) {
+    const x = 92 + ((i * 67 + levelInChapter * 23 + chapterIndex * 11) % 500);
+    obstacles.push({ type: 'spike', x, y: 304, width: 24, height: 16 });
+  }
+
+  for (let i = 0; i < movingCount; i += 1) {
+    const axis = (i + globalLevelIndex) % 2 === 0 ? 'x' : 'y';
+    const x = 150 + ((i * 96 + levelInChapter * 17) % 420);
+    const y = axis === 'x' ? 174 + (i % 3) * 28 : 112 + (i % 4) * 30;
+    obstacles.push({
+      type: 'movingSpike',
+      x,
+      y,
+      width: 24,
+      height: 16,
+      axis,
+      range: 22 + chapterIndex * 8 + (globalLevelIndex % 3) * 5,
+      speed: 0.065 + globalLevelIndex * 0.002 + i * 0.008,
+    });
+  }
+
+  return obstacles;
+}
+
+function createMapElements(chapterIndex, globalLevelIndex) {
+  const boostCount = 1 + Math.floor(globalLevelIndex / 10);
+  const movingPlatformCount = 1 + Math.floor(globalLevelIndex / 8);
+  const mapElements = [];
+
+  for (let i = 0; i < boostCount; i += 1) {
+    mapElements.push({
+      type: 'boostPad',
+      x: clamp(72 + i * 178 + (globalLevelIndex % 4) * 10, 24, 590),
+      y: clamp(296 - i * 26, 120, 304),
+      width: 24,
+      height: 8,
+      forceY: -10.0 - chapterIndex * 0.35 - i * 0.2,
+      forceX: 0.5 + (i % 2) * 0.6,
+    });
+  }
+
+  for (let i = 0; i < movingPlatformCount; i += 1) {
+    mapElements.push({
+      type: 'movingPlatform',
+      x: clamp(132 + i * 154 + (globalLevelIndex % 3) * 8, 26, 560),
+      y: clamp(254 - i * 34, 96, 286),
+      width: clamp(74 - i * 8, 46, 74),
+      height: 12,
+      axis: i % 2 === 0 ? 'x' : 'y',
+      range: 26 + chapterIndex * 8 + i * 6,
+      speed: 0.042 + globalLevelIndex * 0.001 + i * 0.008,
+    });
+  }
+
+  return mapElements;
+}
+
+function createCollectibles(platforms, chapterIndex, globalLevelIndex, hasSecret) {
+  const baseCount = Math.min(6, 2 + Math.floor(globalLevelIndex / 6) + chapterIndex);
+  const collectibles = [];
+
+  for (let i = 0; i < baseCount; i += 1) {
+    const platform = platforms[clamp(i + 1, 1, platforms.length - 1)];
+    collectibles.push({
+      x: clamp(Math.round(platform.x + platform.width / 2 - 6 + ((i % 2) ? 8 : -8)), 8, 620),
+      y: clamp(platform.y - 18 - (i % 3) * 3, 12, 300),
+      width: 12,
+      height: 12,
+    });
+  }
+
+  if (hasSecret) {
+    const leftSideSecret = globalLevelIndex % 2 === 0;
+    const hiddenPlatformX = leftSideSecret ? 12 : 556;
+    const hiddenPlatformY = 62 + (globalLevelIndex % 3) * 10;
+
+    platforms.push({ x: hiddenPlatformX, y: hiddenPlatformY, width: 72, height: 12, hidden: true });
+    collectibles.push({
+      x: hiddenPlatformX + 28,
+      y: hiddenPlatformY - 16,
+      width: 12,
+      height: 12,
+      secret: true,
+    });
+  }
+
+  return collectibles;
+}
+
+function findTopmostPlatform(platforms) {
+  return platforms.reduce((highestPlatform, currentPlatform) => (currentPlatform.y < highestPlatform.y ? currentPlatform : highestPlatform), platforms[0]);
+}
+
+function createLevel(chapter, chapterIndex, levelInChapter) {
+  const globalLevelIndex = chapterIndex * 10 + levelInChapter - 1;
+  const platforms = createBasePlatforms(globalLevelIndex);
+  const hasSecret = SECRET_LEVEL_KEYS.has(`${chapter.chapter}-${levelInChapter}`);
+  const collectibles = createCollectibles(platforms, chapterIndex, globalLevelIndex, hasSecret);
+  const topPlatform = findTopmostPlatform(platforms);
+
+  return {
+    id: `c${chapter.chapter}-l${levelInChapter}`,
+    chapter: chapter.chapter,
+    chapterLevel: levelInChapter,
+    backgroundVariant: chapter.backgroundCycle[(levelInChapter - 1) % chapter.backgroundCycle.length],
+    start: { x: 22, y: 276 },
+    end: {
+      x: clamp(topPlatform.x + topPlatform.width - 16, 560, 612),
+      y: clamp(topPlatform.y - 40, 34, 210),
+      width: 16,
+      height: 40,
+    },
+    platforms,
+    obstacles: createObstacles(chapterIndex, levelInChapter, globalLevelIndex),
+    collectibles,
+    mapElements: createMapElements(chapterIndex, globalLevelIndex),
+  };
+}
+
+/**
+ * 3 chapters × 10 levels, flattened for runtime compatibility.
+ * Difficulty rises by increasing obstacle density, motion complexity and tighter routes per global level index.
+ */
+export const CHAPTERS = CHAPTER_DEFINITIONS.map((chapter, chapterIndex) => ({
+  ...chapter,
+  levels: Array.from({ length: 10 }, (_, index) => createLevel(chapter, chapterIndex, index + 1)),
+}));
+
+export const LEVELS = CHAPTERS.flatMap((chapter) => chapter.levels);
 
 export function createLevelState(template) {
   return {

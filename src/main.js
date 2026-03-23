@@ -37,10 +37,15 @@ const walkCycleVelocityThreshold = 0.2;
 const dashSpeed = 7;
 const dashFrames = 8;
 const WALK_CYCLE_FRAMES = 24;
+const IDLE_CYCLE_FRAMES = 120;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
+const SPIKE_HITBOX_INSET_X = 2;
+const SPIKE_HITBOX_INSET_TOP = 1;
+const SPIKE_HITBOX_INSET_BOTTOM = 1;
+const MIN_HITBOX_SIZE = 1;
 let dashTimer = 0;
 let dashDirection = 1;
 let canDash = true;
@@ -50,6 +55,7 @@ let screenShake = 0;
 let coyoteTimer = 0;
 let jumpBufferTimer = 0;
 let walkCycle = 0;
+let idleCycle = 0;
 let frameCount = 0;
 let meatCollected = 0;
 const collectedMeatKeys = new Set();
@@ -95,6 +101,28 @@ function resolveEntityRect(entity) {
   };
 }
 
+/**
+ * Returns the collision hitbox for an obstacle.
+ * Spike hitboxes are inset slightly to avoid unfair edge-contact deaths.
+ */
+function resolveObstacleHitbox(obstacle) {
+  const rect = resolveEntityRect(obstacle);
+  if (obstacle.type === 'spike' || obstacle.type === 'movingSpike') {
+    const availableInsetXPerSide = Math.max(0, Math.floor((rect.width - MIN_HITBOX_SIZE) / 2));
+    const appliedInsetX = Math.min(SPIKE_HITBOX_INSET_X, availableInsetXPerSide);
+    const availableInsetYTotal = Math.max(0, rect.height - MIN_HITBOX_SIZE);
+    const appliedInsetTop = Math.min(SPIKE_HITBOX_INSET_TOP, Math.floor(availableInsetYTotal / 2));
+    const appliedInsetBottom = Math.min(SPIKE_HITBOX_INSET_BOTTOM, availableInsetYTotal - appliedInsetTop);
+    return {
+      x: rect.x + appliedInsetX,
+      y: rect.y + appliedInsetTop,
+      width: Math.max(MIN_HITBOX_SIZE, rect.width - appliedInsetX * 2),
+      height: Math.max(MIN_HITBOX_SIZE, rect.height - appliedInsetTop - appliedInsetBottom),
+    };
+  }
+  return rect;
+}
+
 function getSolidPlatforms() {
   const movingPlatforms = (level.mapElements || [])
     .filter((mapElement) => mapElement.type === 'movingPlatform')
@@ -109,6 +137,8 @@ function resetPlayerToStart(wasKilled = false) {
   player.vy = 0;
   dashTimer = 0;
   canDash = true;
+  walkCycle = 0;
+  idleCycle = 0;
   if (wasKilled) {
     screenShake = 14;
     playDeath();
@@ -298,6 +328,10 @@ function update() {
   if (grounded && !wasGrounded) playLand();
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
+    idleCycle = 0;
+  } else if (grounded) {
+    // Keep the dinosaur alive when idle with a subtle breathing/blink cycle.
+    idleCycle = (idleCycle + 1) % IDLE_CYCLE_FRAMES;
   }
 
   player.x = Math.max(0, Math.min(WORLD_WIDTH - player.width, player.x));
@@ -305,7 +339,7 @@ function update() {
   if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart(true);
 
   for (const obstacle of level.obstacles) {
-    if (intersects(player, resolveEntityRect(obstacle))) {
+    if (intersects(player, resolveObstacleHitbox(obstacle))) {
       resetPlayerToStart(true);
       break;
     }
@@ -340,6 +374,7 @@ function draw() {
     dashActive: dashTimer > 0,
     grounded,
     walkCycle,
+    idleCycle,
     facing: player.facing,
     dashDirection,
     meatCollected,
@@ -358,8 +393,26 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+/**
+ * Requests fullscreen after the first pointer interaction.
+ * The listener is removed on success or failure to avoid repeated prompts.
+ */
+function requestFullscreenIfNeeded() {
+  if (document.fullscreenElement) {
+    window.removeEventListener('pointerdown', requestFullscreenIfNeeded);
+    return;
+  }
+  document.documentElement.requestFullscreen()
+    .then(() => window.removeEventListener('pointerdown', requestFullscreenIfNeeded))
+    .catch((err) => {
+      console.warn('Fullscreen request failed (usually blocked without a user gesture):', err);
+      window.removeEventListener('pointerdown', requestFullscreenIfNeeded);
+    });
+}
+
 window.addEventListener('resize', resizeCanvas);
 document.addEventListener('fullscreenchange', resizeCanvas);
+window.addEventListener('pointerdown', requestFullscreenIfNeeded);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);
