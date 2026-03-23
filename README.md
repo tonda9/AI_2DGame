@@ -97,7 +97,7 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 Run the level reachability check:
 
 ```bash
-node /home/runner/work/AI_2DGame/AI_2DGame/src/levels/accessibility-report.js
+node src/levels/accessibility-report.js
 ```
 
 The script simulates movement graph traversal with jump/drop limits, vertical paths, moving platforms, boost pads, and spike hazard zones.  

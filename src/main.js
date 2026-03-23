@@ -64,6 +64,12 @@ let meatCollected = 0;
 let climbing = false;
 const collectedMeatKeys = new Set();
 
+function performJump(verticalVelocity) {
+  player.vy = verticalVelocity;
+  jumpBufferTimer = 0;
+  playJump();
+}
+
 let levelIndex = 0;
 let level = createLevelState(LEVELS[0]);
 
@@ -274,9 +280,9 @@ function update() {
   const pressSwitchLevel = input.isPressed('switchLevel');
   const pressFullscreen = input.isPressed('fullscreen');
   const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
-  const inputY = (holdDown ? 1 : 0) - (holdUp ? 1 : 0);
+  const verticalInput = (holdDown ? 1 : 0) - (holdUp ? 1 : 0);
   const activeVerticalPath = getActiveVerticalPath();
-  const climbingOnPath = Boolean(activeVerticalPath) && inputY !== 0;
+  const climbingOnPath = Boolean(activeVerticalPath) && verticalInput !== 0;
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
 
@@ -323,28 +329,22 @@ function update() {
 
   if (jumpBufferTimer > 0) {
     if (wallSliding) {
-      player.vy = wallJumpVelocity;
+      performJump(wallJumpVelocity);
       player.vx = -wallDirection * wallJumpPush;
       player.facing = -wallDirection;
-      jumpBufferTimer = 0;
       coyoteTimer = 0;
-      playJump();
     } else if (coyoteTimer > 0) {
-      player.vy = jumpVelocity;
-      jumpBufferTimer = 0;
+      performJump(jumpVelocity);
       coyoteTimer = 0;
       grounded = false;
-      playJump();
     } else if (activeVerticalPath) {
-      player.vy = jumpVelocity;
-      jumpBufferTimer = 0;
+      performJump(jumpVelocity);
       climbing = false;
-      playJump();
     }
   }
 
   if (climbingOnPath) {
-    player.vy = inputY * VERTICAL_PATH_CLIMB_SPEED;
+    player.vy = verticalInput * VERTICAL_PATH_CLIMB_SPEED;
   } else {
     const jumpCutting = !holdJump && player.vy < 0;
     const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);

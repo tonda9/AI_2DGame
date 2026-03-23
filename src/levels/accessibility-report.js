@@ -9,6 +9,7 @@ const BOOST_JUMP_RUN = 240;
 const MAX_SAFE_DROP = 240;
 const LADDER_LINK_RANGE_X = 68;
 const LADDER_LINK_RANGE_Y = 36;
+// Floating-point tolerance prevents tiny precision noise from reporting false in/out rectangle misses.
 const EPSILON = 0.0001;
 
 function resolveEntityRect(entity) {
@@ -242,7 +243,7 @@ const levelsWithIssues = report.filter((entry) => entry.unreachable.length > 0);
 const levelsWithHazards = report.filter((entry) => entry.hazardContacts.length > 0);
 
 if (levelsWithIssues.length === 0) {
-  console.log('Accessibility report: all 30 levels passed reachability checks.');
+  console.log(`Accessibility report: all ${LEVELS.length} levels passed reachability checks.`);
   if (levelsWithHazards.length > 0) {
     console.log(`Hazard note: ${levelsWithHazards.length} level(s) contain risky nodes near spike zones (still considered reachable).`);
   }
