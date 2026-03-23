@@ -95,6 +95,19 @@ function resolveEntityRect(entity) {
   };
 }
 
+function resolveObstacleHitbox(obstacle) {
+  const rect = resolveEntityRect(obstacle);
+  if (obstacle.type === 'spike' || obstacle.type === 'movingSpike') {
+    return {
+      x: rect.x + 2,
+      y: rect.y + 1,
+      width: Math.max(1, rect.width - 4),
+      height: Math.max(1, rect.height - 2),
+    };
+  }
+  return rect;
+}
+
 function getSolidPlatforms() {
   const movingPlatforms = (level.mapElements || [])
     .filter((mapElement) => mapElement.type === 'movingPlatform')
@@ -305,7 +318,7 @@ function update() {
   if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart(true);
 
   for (const obstacle of level.obstacles) {
-    if (intersects(player, resolveEntityRect(obstacle))) {
+    if (intersects(player, resolveObstacleHitbox(obstacle))) {
       resetPlayerToStart(true);
       break;
     }
@@ -360,6 +373,24 @@ function frame() {
 
 window.addEventListener('resize', resizeCanvas);
 document.addEventListener('fullscreenchange', resizeCanvas);
+window.addEventListener(
+  'keydown',
+  () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  },
+  { once: true },
+);
+window.addEventListener(
+  'pointerdown',
+  () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  },
+  { once: true },
+);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);
