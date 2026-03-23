@@ -85,7 +85,7 @@ function ensureBackgroundMusic() {
   if (backgroundMusic) return backgroundMusic;
   backgroundMusic = new Audio(BACKGROUND_MUSIC_SRC);
   backgroundMusic.loop = true;
-  backgroundMusic.preload = 'none';
+  backgroundMusic.preload = 'metadata';
   backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
   return backgroundMusic;
 }
@@ -108,8 +108,9 @@ function playBackgroundMusicForLevel(levelId) {
   if (paused) return;
   const maybePromise = music.play();
   if (maybePromise && typeof maybePromise.catch === 'function') {
-    maybePromise.catch(() => {
+    maybePromise.catch((err) => {
       // Autoplay can be blocked until first user gesture. Retry is handled by pointer/keydown listeners.
+      console.debug('Background music autoplay blocked:', err);
     });
   }
 }
@@ -124,7 +125,7 @@ function resumeBackgroundMusic() {
   const music = ensureBackgroundMusic();
   const maybePromise = music.play();
   if (maybePromise && typeof maybePromise.catch === 'function') {
-    maybePromise.catch(() => {});
+    maybePromise.catch((err) => console.debug('Background music resume blocked:', err));
   }
 }
 
@@ -235,6 +236,7 @@ function getActiveVerticalPath() {
 }
 
 function resetPlayerToStart(wasKilled = false) {
+  // Restarting a level (death/manual switch) intentionally resets soundtrack timing for a clean retry feel.
   stopBackgroundMusic();
   player.x = level.start.x;
   player.y = level.start.y;
@@ -254,7 +256,6 @@ function resetPlayerToStart(wasKilled = false) {
 
 function setLevel(index, fromGoal = false) {
   if (fromGoal) playLevelComplete();
-  stopBackgroundMusic();
   levelIndex = (index + LEVELS.length) % LEVELS.length;
   level = createLevelState(LEVELS[levelIndex]);
   level.collectibles.forEach((collectible, collectibleIndex) => {
