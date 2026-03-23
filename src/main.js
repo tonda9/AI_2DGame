@@ -40,6 +40,9 @@ const WALK_CYCLE_FRAMES = 24;
 const IDLE_CYCLE_FRAMES = 120;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
+const VERTICAL_PATH_GRAB_MARGIN_X = 6;
+const VERTICAL_PATH_CLIMB_SPEED = 1.9;
+const CLIMB_HORIZONTAL_SPEED_FACTOR = 0.55;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 const SPIKE_HITBOX_INSET_X = 2;
@@ -58,6 +61,7 @@ let walkCycle = 0;
 let idleCycle = 0;
 let frameCount = 0;
 let meatCollected = 0;
+let climbing = false;
 const collectedMeatKeys = new Set();
 
 let levelIndex = 0;
@@ -130,6 +134,21 @@ function getSolidPlatforms() {
   return [...level.platforms, ...movingPlatforms];
 }
 
+function getVerticalPaths() {
+  return (level.mapElements || [])
+    .filter((mapElement) => mapElement.type === 'verticalPath')
+    .map(resolveEntityRect);
+}
+
+function getActiveVerticalPath() {
+  return getVerticalPaths().find((path) => (
+    player.x + player.width > path.x - VERTICAL_PATH_GRAB_MARGIN_X
+    && player.x < path.x + path.width + VERTICAL_PATH_GRAB_MARGIN_X
+    && player.y + player.height > path.y
+    && player.y < path.y + path.height
+  )) ?? null;
+}
+
 function resetPlayerToStart(wasKilled = false) {
   player.x = level.start.x;
   player.y = level.start.y;
@@ -137,6 +156,7 @@ function resetPlayerToStart(wasKilled = false) {
   player.vy = 0;
   dashTimer = 0;
   canDash = true;
+  climbing = false;
   walkCycle = 0;
   idleCycle = 0;
   if (wasKilled) {
@@ -246,12 +266,17 @@ function update() {
   updateDynamicEntities();
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
+  const holdUp = input.isDown('up');
+  const holdDown = input.isDown('down');
   const holdJump = input.isDown('jump');
   const pressJump = input.isPressed('jump');
   const pressDash = input.isPressed('dash');
   const pressSwitchLevel = input.isPressed('switchLevel');
   const pressFullscreen = input.isPressed('fullscreen');
   const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
+  const inputY = (holdDown ? 1 : 0) - (holdUp ? 1 : 0);
+  const activeVerticalPath = getActiveVerticalPath();
+  const climbingOnPath = Boolean(activeVerticalPath) && inputY !== 0;
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
 
@@ -271,23 +296,26 @@ function update() {
   const touchingLeftWall = isTouchingWall(-1);
   const touchingRightWall = isTouchingWall(1);
   const wallDirection = touchingLeftWall ? -1 : touchingRightWall ? 1 : 0;
-  const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
+  const wallSliding = !climbingOnPath && !grounded && player.vy > 0 && wallDirection !== 0
     && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
-  if (pressDash && canDash) {
+  if (pressDash && canDash && !climbingOnPath) {
     dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
     canDash = false;
     playDash();
   }
 
-  if (dashTimer > 0) {
+  climbing = climbingOnPath;
+
+  if (dashTimer > 0 && !climbingOnPath) {
     dashTimer -= 1;
     player.vx = dashDirection * dashSpeed;
   } else {
+    if (climbingOnPath) dashTimer = 0;
     const acceleration = grounded ? runAccelGround : runAccelAir;
     const deceleration = grounded ? runDecelGround : runDecelAir;
-    const targetSpeed = inputX * maxRunSpeed;
+    const targetSpeed = inputX * (climbingOnPath ? maxRunSpeed * CLIMB_HORIZONTAL_SPEED_FACTOR : maxRunSpeed);
     player.vx = inputX !== 0
       ? approach(player.vx, targetSpeed, acceleration)
       : approach(player.vx, 0, deceleration);
@@ -307,23 +335,38 @@ function update() {
       coyoteTimer = 0;
       grounded = false;
       playJump();
+    } else if (activeVerticalPath) {
+      player.vy = jumpVelocity;
+      jumpBufferTimer = 0;
+      climbing = false;
+      playJump();
     }
   }
 
-  const jumpCutting = !holdJump && player.vy < 0;
-  const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
-  player.vy = Math.min(maxFallSpeed, player.vy + gravity);
-  if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
+  if (climbingOnPath) {
+    player.vy = inputY * VERTICAL_PATH_CLIMB_SPEED;
+  } else {
+    const jumpCutting = !holdJump && player.vy < 0;
+    const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
+    player.vy = Math.min(maxFallSpeed, player.vy + gravity);
+    if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
+  }
 
   const previousY = player.y;
   movePlayerHorizontally(player.vx);
   player.y += player.vy;
 
+  if (activeVerticalPath && climbingOnPath) {
+    const minY = activeVerticalPath.y - player.height;
+    const maxY = activeVerticalPath.y + activeVerticalPath.height - player.height;
+    player.y = Math.max(minY, Math.min(maxY, player.y));
+  }
+
   wasGrounded = grounded;
-  const landed = resolveVerticalCollisions(previousY);
+  const landed = climbingOnPath ? false : resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
-  grounded = landed || isOnGround();
+  grounded = !climbingOnPath && (landed || isOnGround());
   if (grounded) canDash = true;
   if (grounded && !wasGrounded) playLand();
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
