@@ -7,6 +7,8 @@ const MAX_JUMP_RUN = 176;
 const BOOST_JUMP_RISE = 228;
 const BOOST_JUMP_RUN = 240;
 const MAX_SAFE_DROP = 240;
+const LADDER_LINK_RANGE_X = 68;
+const LADDER_LINK_RANGE_Y = 36;
 const EPSILON = 0.0001;
 
 function resolveEntityRect(entity) {
@@ -97,6 +99,35 @@ function createVerticalPathZones(level) {
     .map((path) => ({ x: path.x, y: path.y, width: path.width, height: path.height }));
 }
 
+function createVerticalPathNodes(verticalPaths) {
+  const nodes = [];
+  verticalPaths.forEach((path, index) => {
+    const centerX = Math.round(path.x + path.width / 2 - PLAYER_WIDTH / 2);
+    nodes.push({
+      id: `vertical-top-${index}`,
+      kind: 'verticalPath',
+      x: centerX,
+      y: Math.round(path.y - PLAYER_HEIGHT),
+      source: path,
+    });
+    nodes.push({
+      id: `vertical-mid-${index}`,
+      kind: 'verticalPath',
+      x: centerX,
+      y: Math.round(path.y + path.height / 2 - PLAYER_HEIGHT / 2),
+      source: path,
+    });
+    nodes.push({
+      id: `vertical-bottom-${index}`,
+      kind: 'verticalPath',
+      x: centerX,
+      y: Math.round(path.y + path.height - PLAYER_HEIGHT),
+      source: path,
+    });
+  });
+  return nodes;
+}
+
 function createHazardZones(level) {
   return (level.obstacles || [])
     .filter((obstacle) => obstacle.type === 'spike' || obstacle.type === 'movingSpike')
@@ -111,6 +142,16 @@ function nearVerticalPath(node, path) {
     && playerCenterX <= path.x + path.width + 8
     && playerCenterY >= path.y - 12
     && playerCenterY <= path.y + path.height + 12
+  );
+}
+
+function canAttachToVerticalPath(node, path) {
+  const nodeCenterX = node.x + PLAYER_WIDTH / 2;
+  const nodeBottomY = node.y + PLAYER_HEIGHT;
+  return (
+    Math.abs(nodeCenterX - (path.x + path.width / 2)) <= LADDER_LINK_RANGE_X
+    && nodeBottomY >= path.y - LADDER_LINK_RANGE_Y
+    && nodeBottomY <= path.y + path.height + LADDER_LINK_RANGE_Y
   );
 }
 
@@ -137,26 +178,25 @@ function analyzeLevel(level) {
   const platforms = collectNavigablePlatforms(level);
   const platformNodes = createPlatformNodes(platforms);
   const collectibleNodes = createCollectibleNodes(level.collectibles || []);
-  const baseNodes = [...createGoalNodes(level), ...platformNodes, ...collectibleNodes];
   const verticalPaths = createVerticalPathZones(level);
+  const verticalPathNodes = createVerticalPathNodes(verticalPaths);
+  const baseNodes = [...createGoalNodes(level), ...platformNodes, ...collectibleNodes, ...verticalPathNodes];
   const boostPads = (level.mapElements || []).filter((mapElement) => mapElement.type === 'boostPad');
   const hazardZones = createHazardZones(level);
 
-  const isHazardNode = (node) => hazardZones.some((hazard) => pointInRect({
+  const hazardTouches = (node) => hazardZones.some((hazard) => pointInRect({
     x: node.x + PLAYER_WIDTH / 2,
     y: node.y + PLAYER_HEIGHT / 2,
   }, hazard));
 
   const graph = new Map(baseNodes.map((node) => [node.id, new Set()]));
   for (const from of baseNodes) {
-    if (isHazardNode(from) && from.kind !== 'start') continue;
-
     for (const to of baseNodes) {
       if (from.id === to.id) continue;
-      if (isHazardNode(to) && to.kind !== 'goal') continue;
 
       const connectedByPath = verticalPaths.some((path) => nearVerticalPath(from, path) && nearVerticalPath(to, path));
-      if (connectedByPath || canTraverseWithJump(from, to, boostPads)) {
+      const connectedToPath = verticalPaths.some((path) => canAttachToVerticalPath(from, path) && canAttachToVerticalPath(to, path));
+      if (connectedByPath || connectedToPath || canTraverseWithJump(from, to, boostPads)) {
         graph.get(from.id).add(to.id);
       }
     }
@@ -185,18 +225,27 @@ function analyzeLevel(level) {
     .filter((node) => !visited.has(node.id))
     .map((node) => ({ id: node.id, kind: node.kind, x: node.x, y: node.y }));
 
+  const hazardContacts = requiredNodes
+    .filter((node) => hazardTouches(node))
+    .map((node) => ({ id: node.id, kind: node.kind, x: node.x, y: node.y }));
+
   return {
     levelId: level.id,
     unreachable,
+    hazardContacts,
     totalChecked: requiredNodes.length,
   };
 }
 
 const report = LEVELS.map(analyzeLevel);
 const levelsWithIssues = report.filter((entry) => entry.unreachable.length > 0);
+const levelsWithHazards = report.filter((entry) => entry.hazardContacts.length > 0);
 
 if (levelsWithIssues.length === 0) {
   console.log('Accessibility report: all 30 levels passed reachability checks.');
+  if (levelsWithHazards.length > 0) {
+    console.log(`Hazard note: ${levelsWithHazards.length} level(s) contain risky nodes near spike zones (still considered reachable).`);
+  }
   process.exit(0);
 }
 
