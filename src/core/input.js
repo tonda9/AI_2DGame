@@ -5,6 +5,7 @@ const ACTION_KEYS = {
   down: ['ArrowDown', 'KeyS'],
   jump: ['Space'],
   dash: ['ShiftLeft', 'ShiftRight', 'KeyX'],
+  pause: ['KeyP', 'Escape'],
   switchLevel: ['KeyL'],
   fullscreen: ['KeyF'],
 };

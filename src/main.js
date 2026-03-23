@@ -8,6 +8,13 @@ const ctx = canvas.getContext('2d');
 const input = new Input();
 const WORLD_WIDTH = 640;
 const WORLD_HEIGHT = 360;
+const BACKGROUND_MUSIC_VOLUME = 0.3;
+const BACKGROUND_MUSIC_SRC = './assets/audio/background.mp3';
+const CHAPTER_MUSIC = {
+  c1: BACKGROUND_MUSIC_SRC,
+  c2: BACKGROUND_MUSIC_SRC,
+  c3: BACKGROUND_MUSIC_SRC,
+};
 
 const player = {
   x: 120,
@@ -62,7 +69,79 @@ let idleCycle = 0;
 let frameCount = 0;
 let meatCollected = 0;
 let climbing = false;
+let paused = false;
 const collectedMeatKeys = new Set();
+let backgroundMusic = null;
+let activeMusicPath = '';
+let isMusicPrimed = false;
+let shouldResumeMusicAfterVisibility = false;
+
+function resolveMusicSrcForLevel(levelId) {
+  const chapterKey = levelId?.split('-')[0];
+  return CHAPTER_MUSIC[chapterKey] || BACKGROUND_MUSIC_SRC;
+}
+
+function ensureBackgroundMusic() {
+  if (backgroundMusic) return backgroundMusic;
+  backgroundMusic = new Audio(BACKGROUND_MUSIC_SRC);
+  backgroundMusic.loop = true;
+  backgroundMusic.preload = 'none';
+  backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+  return backgroundMusic;
+}
+
+function stopBackgroundMusic() {
+  if (!backgroundMusic) return;
+  backgroundMusic.pause();
+  backgroundMusic.currentTime = 0;
+}
+
+function playBackgroundMusicForLevel(levelId) {
+  const music = ensureBackgroundMusic();
+  const nextSrc = resolveMusicSrcForLevel(levelId);
+  if (activeMusicPath !== nextSrc) {
+    activeMusicPath = nextSrc;
+    music.src = nextSrc;
+    music.load();
+  }
+  music.volume = BACKGROUND_MUSIC_VOLUME;
+  if (paused) return;
+  const maybePromise = music.play();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch(() => {
+      // Autoplay can be blocked until first user gesture. Retry is handled by pointer/keydown listeners.
+    });
+  }
+}
+
+function pauseBackgroundMusic() {
+  if (!backgroundMusic) return;
+  backgroundMusic.pause();
+}
+
+function resumeBackgroundMusic() {
+  if (paused) return;
+  const music = ensureBackgroundMusic();
+  const maybePromise = music.play();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch(() => {});
+  }
+}
+
+function primeAudioIfNeeded() {
+  if (isMusicPrimed) return;
+  isMusicPrimed = true;
+  resumeBackgroundMusic();
+}
+
+function setPaused(nextPaused) {
+  paused = nextPaused;
+  if (paused) {
+    pauseBackgroundMusic();
+  } else {
+    resumeBackgroundMusic();
+  }
+}
 
 function performJump(verticalVelocity) {
   player.vy = verticalVelocity;
@@ -156,6 +235,7 @@ function getActiveVerticalPath() {
 }
 
 function resetPlayerToStart(wasKilled = false) {
+  stopBackgroundMusic();
   player.x = level.start.x;
   player.y = level.start.y;
   player.vx = 0;
@@ -169,10 +249,12 @@ function resetPlayerToStart(wasKilled = false) {
     screenShake = 14;
     playDeath();
   }
+  playBackgroundMusicForLevel(level.id);
 }
 
 function setLevel(index, fromGoal = false) {
   if (fromGoal) playLevelComplete();
+  stopBackgroundMusic();
   levelIndex = (index + LEVELS.length) % LEVELS.length;
   level = createLevelState(LEVELS[levelIndex]);
   level.collectibles.forEach((collectible, collectibleIndex) => {
@@ -267,6 +349,10 @@ function isTouchingWall(direction) {
 }
 
 function update() {
+  const pressPause = input.isPressed('pause');
+  if (pressPause) setPaused(!paused);
+  if (paused) return;
+
   frameCount += 1;
   if (screenShake > 0) screenShake = Math.max(0, screenShake - 1);
   updateDynamicEntities();
@@ -453,9 +539,21 @@ function requestFullscreenIfNeeded() {
     });
 }
 
+function handleVisibilityChange() {
+  if (document.hidden) {
+    shouldResumeMusicAfterVisibility = !paused;
+    pauseBackgroundMusic();
+  } else if (shouldResumeMusicAfterVisibility) {
+    resumeBackgroundMusic();
+  }
+}
+
 window.addEventListener('resize', resizeCanvas);
 document.addEventListener('fullscreenchange', resizeCanvas);
 window.addEventListener('pointerdown', requestFullscreenIfNeeded);
+window.addEventListener('pointerdown', primeAudioIfNeeded, { once: true });
+window.addEventListener('keydown', primeAudioIfNeeded, { once: true });
+document.addEventListener('visibilitychange', handleVisibilityChange);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);
