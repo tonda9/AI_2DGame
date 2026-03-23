@@ -1,6 +1,7 @@
 import { Input } from './core/input.js';
 import { renderScene } from './render/renderer.js';
 import { LEVELS, createLevelState } from './levels/levels.js';
+import { playJump, playDash, playLand, playCollect, playDeath, playLevelComplete } from './core/sound.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -42,7 +43,10 @@ const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 let dashTimer = 0;
 let dashDirection = 1;
+let canDash = true;
 let grounded = false;
+let wasGrounded = false;
+let screenShake = 0;
 let coyoteTimer = 0;
 let jumpBufferTimer = 0;
 let walkCycle = 0;
@@ -98,15 +102,21 @@ function getSolidPlatforms() {
   return [...level.platforms, ...movingPlatforms];
 }
 
-function resetPlayerToStart() {
+function resetPlayerToStart(wasKilled = false) {
   player.x = level.start.x;
   player.y = level.start.y;
   player.vx = 0;
   player.vy = 0;
   dashTimer = 0;
+  canDash = true;
+  if (wasKilled) {
+    screenShake = 14;
+    playDeath();
+  }
 }
 
-function setLevel(index) {
+function setLevel(index, fromGoal = false) {
+  if (fromGoal) playLevelComplete();
   levelIndex = (index + LEVELS.length) % LEVELS.length;
   level = createLevelState(LEVELS[levelIndex]);
   level.collectibles.forEach((collectible, collectibleIndex) => {
@@ -202,6 +212,7 @@ function isTouchingWall(direction) {
 
 function update() {
   frameCount += 1;
+  if (screenShake > 0) screenShake = Math.max(0, screenShake - 1);
   updateDynamicEntities();
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
@@ -209,9 +220,18 @@ function update() {
   const pressJump = input.isPressed('jump');
   const pressDash = input.isPressed('dash');
   const pressSwitchLevel = input.isPressed('switchLevel');
+  const pressFullscreen = input.isPressed('fullscreen');
   const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
+
+  if (pressFullscreen) {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => console.warn('Fullscreen request failed:', err));
+    } else {
+      document.exitFullscreen().catch((err) => console.warn('Fullscreen exit failed:', err));
+    }
+  }
 
   if (inputX !== 0) player.facing = inputX;
   if (pressJump) jumpBufferTimer = jumpBufferFrames;
@@ -224,9 +244,11 @@ function update() {
   const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
     && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
-  if (pressDash) {
+  if (pressDash && canDash) {
     dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
+    canDash = false;
+    playDash();
   }
 
   if (dashTimer > 0) {
@@ -248,11 +270,13 @@ function update() {
       player.facing = -wallDirection;
       jumpBufferTimer = 0;
       coyoteTimer = 0;
+      playJump();
     } else if (coyoteTimer > 0) {
       player.vy = jumpVelocity;
       jumpBufferTimer = 0;
       coyoteTimer = 0;
       grounded = false;
+      playJump();
     }
   }
 
@@ -265,21 +289,24 @@ function update() {
   movePlayerHorizontally(player.vx);
   player.y += player.vy;
 
+  wasGrounded = grounded;
   const landed = resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
   grounded = landed || isOnGround();
+  if (grounded) canDash = true;
+  if (grounded && !wasGrounded) playLand();
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
   }
 
   player.x = Math.max(0, Math.min(WORLD_WIDTH - player.width, player.x));
 
-  if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart();
+  if (player.y > WORLD_HEIGHT + FALL_RESPAWN_THRESHOLD) resetPlayerToStart(true);
 
   for (const obstacle of level.obstacles) {
     if (intersects(player, resolveEntityRect(obstacle))) {
-      resetPlayerToStart();
+      resetPlayerToStart(true);
       break;
     }
   }
@@ -291,11 +318,12 @@ function update() {
       if (!collectedMeatKeys.has(meatKey)) {
         collectedMeatKeys.add(meatKey);
         meatCollected += 1;
+        playCollect();
       }
     }
   }
 
-  if (intersects(player, level.end)) setLevel(levelIndex + 1);
+  if (intersects(player, level.end)) setLevel(levelIndex + 1, true);
 }
 
 function draw() {
@@ -319,6 +347,7 @@ function draw() {
     velocityY: player.vy,
     worldWidth: WORLD_WIDTH,
     worldHeight: WORLD_HEIGHT,
+    screenShake,
   });
 }
 
@@ -330,6 +359,7 @@ function frame() {
 }
 
 window.addEventListener('resize', resizeCanvas);
+document.addEventListener('fullscreenchange', resizeCanvas);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);

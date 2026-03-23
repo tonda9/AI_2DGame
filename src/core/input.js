@@ -4,6 +4,7 @@ const ACTION_KEYS = {
   jump: ['Space', 'KeyW', 'ArrowUp'],
   dash: ['ShiftLeft', 'ShiftRight', 'KeyX'],
   switchLevel: ['KeyL'],
+  fullscreen: ['KeyF'],
 };
 
 export class Input {

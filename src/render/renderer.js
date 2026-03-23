@@ -20,7 +20,55 @@ function drawCloud(ctx, x, y) {
   drawPixelRect(ctx, x + 4, y + 12, 18, 4, '#f2fbff');
 }
 
+function drawStars(ctx, worldWidth, worldHeight, frameCount, count, colors, heightRatio) {
+  for (let i = 0; i < count; i++) {
+    const x = (i * 173 + 31) % worldWidth;
+    const y = (i * 97 + 13) % Math.floor(worldHeight * heightRatio);
+    const bright = Math.floor((frameCount + i * 13) / 22) % 2;
+    const color = bright ? '#ffffff' : colors[i % colors.length];
+    drawPixelRect(ctx, x, y, bright ? 2 : 1, bright ? 2 : 1, color);
+  }
+}
+
+function drawNightBackground(ctx, worldWidth, worldHeight, frameCount) {
+  drawPixelRect(ctx, 0, 0, worldWidth, worldHeight, '#0c0e24');
+  drawStars(ctx, worldWidth, worldHeight, frameCount, 50, ['#8ab4f8', '#b0c8e8', '#c8d8f0'], 0.75);
+  drawPixelRect(ctx, 572, 26, 28, 28, '#f5f3cc');
+  drawPixelRect(ctx, 582, 26, 14, 28, '#0c0e24');
+  drawPixelRect(ctx, 0, 286, worldWidth, worldHeight - 286, '#131420');
+  drawPixelRect(ctx, 40, 278, 160, 8, '#131420');
+  drawPixelRect(ctx, 80, 272, 80, 6, '#131420');
+  drawPixelRect(ctx, 380, 275, 200, 11, '#131420');
+  drawPixelRect(ctx, 420, 269, 100, 6, '#131420');
+}
+
+function drawVoidBackground(ctx, worldWidth, worldHeight, frameCount) {
+  drawPixelRect(ctx, 0, 0, worldWidth, worldHeight, '#040408');
+  const prevAlpha = ctx.globalAlpha;
+  ctx.globalAlpha = 0.1;
+  drawPixelRect(ctx, 50, 30, 240, 160, '#1a0050');
+  drawPixelRect(ctx, 390, 20, 210, 140, '#00104a');
+  ctx.globalAlpha = prevAlpha;
+  drawStars(ctx, worldWidth, worldHeight, frameCount, 80, ['#8ab4f8', '#f8a8cc', '#a8f8cc', '#f8f8a8'], 0.88);
+  const cx = Math.floor(worldWidth * 0.62);
+  const cy = Math.floor(worldHeight * 0.32);
+  const pulse = Math.floor(Math.sin(frameCount * 0.04) * 6) + 14;
+  for (let r = pulse; r > 2; r -= 3) {
+    const brightness = Math.max(2, Math.floor((1 - r / pulse) * 28)).toString(16).padStart(2, '0');
+    drawPixelRect(ctx, cx - r, cy - r, r * 2, r * 2, `#${brightness}00${brightness}`);
+  }
+  drawPixelRect(ctx, 0, worldHeight - 56, worldWidth, 56, '#080810');
+}
+
 function drawBackground(ctx, worldWidth, worldHeight, frameCount, variant = 'day') {
+  if (variant === 'night') {
+    drawNightBackground(ctx, worldWidth, worldHeight, frameCount);
+    return;
+  }
+  if (variant === 'void') {
+    drawVoidBackground(ctx, worldWidth, worldHeight, frameCount);
+    return;
+  }
   const scroll = frameCount % (worldWidth + 80);
   const slowCloudRange = worldWidth + 100;
   const slowCloudX = wrapPosition((worldWidth + 120) - scroll * 0.6, slowCloudRange);
@@ -200,11 +248,14 @@ export function renderScene(ctx, canvas, state) {
   const viewportHeight = worldHeight * scale;
   const offsetX = (canvas.width - viewportWidth) / 2;
   const offsetY = (canvas.height - viewportHeight) / 2;
+  const shake = state.screenShake ?? 0;
+  const shakeX = shake > 0 ? (Math.random() - 0.5) * shake * 0.6 : 0;
+  const shakeY = shake > 0 ? (Math.random() - 0.5) * shake * 0.6 : 0;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   drawPixelRect(ctx, 0, 0, canvas.width, canvas.height, '#111');
   ctx.save();
-  ctx.translate(offsetX, offsetY);
+  ctx.translate(offsetX + shakeX, offsetY + shakeY);
   ctx.scale(scale, scale);
   drawBackground(ctx, worldWidth, worldHeight, state.frameCount, state.backgroundVariant);
 
