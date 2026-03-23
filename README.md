@@ -31,14 +31,18 @@ AI_2DGame/
 - Optional wall-slide and wall-jump behavior
 - Dash effect with multi-block color trail
 - Pixel-art platforms + ground
-- Four level definitions (`meadow-1`, `canyon-2`, `blackhole-3`, `rift-4`) with start/end points
-- Pixel-art obstacles (spikes + moving spikes), platform gaps, boost pads, moving platforms, and meat collectibles
+- 3 chapters with 10 levels each (30 total), generated from chapter definitions for easy expansion
+- Progressive difficulty from chapter 1 level 1 (easiest) to chapter 3 level 10 (hardest)
+- Pixel-art obstacles (spikes + moving spikes), platform gaps, boost pads, moving platforms, and meat collectibles in every level
+- Hidden secret side areas in selected levels that reward exploration with extra meat collectibles
 - Pixel-art sky with animated clouds
+- Passive dinosaur idle animation (breathing, blinking, tail movement) when standing still
 - Input remains isolated in `src/core/input.js`
 
 ## Level object format
 
-Add new maps in `src/levels/levels.js` using the same shape:
+Levels are generated from chapter metadata in `src/levels/levels.js`, and exported as a flat runtime `LEVELS` array.
+Each level still uses this shape:
 
 ```js
 {
@@ -78,7 +82,7 @@ This project is static (no build step). It can be deployed directly to GitHub Pa
 - Double-click `index.html` to open directly in a browser, or
 - serve with any static server (optional), e.g. `python3 -m http.server`.
 - Resize the browser window to verify the canvas fills the screen while preserving the 640x360 letterboxed world.
-- Press `L` to switch levels until `rift-4` to test dash trail/flash, meat pickups, moving spikes, boost pads, and moving platforms.
+- Press `L` to cycle across all 30 levels and verify chapter progression, secrets, moving hazards, and interactive elements.
 - HUD is intentionally clean: it shows only `meat: <count>` (no debug key-state text).
 
 ## Integration snippet

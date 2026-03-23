@@ -4,6 +4,13 @@ const BOOST_PAD_INSET = 2;
 const BOOST_PAD_PULSE_INSET_MULTIPLIER = 4;
 const BOOST_PAD_MIN_PULSE_WIDTH = 2;
 const BOOST_PAD_PULSE_FRAME_DIVISOR = 8;
+const IDLE_BLINK_CYCLE_LENGTH = 90;
+const IDLE_BLINK_START_FRAME = 82;
+const IDLE_VELOCITY_THRESHOLD = 0.1;
+const IDLE_BREATH_FREQUENCY = 0.08;
+const IDLE_BREATH_AMPLITUDE = 1.2;
+const IDLE_TAIL_SWAY_DIVISOR = 18;
+const IDLE_TAIL_LIFT_AMOUNT = -1;
 
 function drawPixelRect(ctx, x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -194,11 +201,14 @@ function drawPlayer(ctx, state) {
   const isJumping = !state.grounded && state.velocityY < 0;
   const isFalling = !state.grounded && state.velocityY >= 0;
   const isDashing = state.dashActive;
+  // Passive idle animation for the dinosaur: breathing bob + occasional blink + tail sway.
+  const isIdle = state.grounded && Math.abs(state.player.vx) <= IDLE_VELOCITY_THRESHOLD && !isDashing;
+  const idleBreathOffset = isIdle ? Math.sin((state.idleCycle ?? 0) * IDLE_BREATH_FREQUENCY) * IDLE_BREATH_AMPLITUDE : 0;
   const walkPhase = Math.floor(state.walkCycle / 6) % 2;
   const facing = isDashing ? state.dashDirection : state.facing;
 
   const mapX = (x, w) => (facing === 1 ? x : SPRITE_WIDTH_BLOCKS - x - w);
-  const spriteY = py + (isJumping ? -2 : 0) + (isDashing ? -1 : 0);
+  const spriteY = py + idleBreathOffset + (isJumping ? -2 : 0) + (isDashing ? -1 : 0);
 
   const bodyBlocks = [
     [1, 1, 5, 1],
@@ -221,10 +231,12 @@ function drawPlayer(ctx, state) {
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + frontLegY * block, block, block, dashTrim);
 
   const tailY = isFalling ? 4 : 5;
+  const idleTailLift = isIdle && Math.floor((state.idleCycle ?? 0) / IDLE_TAIL_SWAY_DIVISOR) % 2 === 0 ? IDLE_TAIL_LIFT_AMOUNT : 0;
   const tailColor = isDashing ? '#9afdf4' : '#3f9152';
-  drawPixelRect(ctx, px + mapX(0, 2) * block, spriteY + tailY * block, 2 * block, block, tailColor);
+  drawPixelRect(ctx, px + mapX(0, 2) * block, spriteY + (tailY + idleTailLift) * block, 2 * block, block, tailColor);
   drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, block, block, '#fff');
-  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block, 2, 2, '#111');
+  const blinkFrame = isIdle && (state.idleCycle ?? 0) % IDLE_BLINK_CYCLE_LENGTH > IDLE_BLINK_START_FRAME;
+  drawPixelRect(ctx, px + mapX(5, 1) * block, spriteY + 2 * block + (blinkFrame ? 2 : 0), 2, blinkFrame ? 1 : 2, '#111');
   drawPixelRect(ctx, px + mapX(7, 1) * block, spriteY + 4 * block, block, block, '#9f6c3f');
 }
 

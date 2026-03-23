@@ -37,6 +37,7 @@ const walkCycleVelocityThreshold = 0.2;
 const dashSpeed = 7;
 const dashFrames = 8;
 const WALK_CYCLE_FRAMES = 24;
+const IDLE_CYCLE_FRAMES = 120;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
 const DEFAULT_BOOST_FORCE_Y = -10;
@@ -54,6 +55,7 @@ let screenShake = 0;
 let coyoteTimer = 0;
 let jumpBufferTimer = 0;
 let walkCycle = 0;
+let idleCycle = 0;
 let frameCount = 0;
 let meatCollected = 0;
 const collectedMeatKeys = new Set();
@@ -135,6 +137,8 @@ function resetPlayerToStart(wasKilled = false) {
   player.vy = 0;
   dashTimer = 0;
   canDash = true;
+  walkCycle = 0;
+  idleCycle = 0;
   if (wasKilled) {
     screenShake = 14;
     playDeath();
@@ -324,6 +328,10 @@ function update() {
   if (grounded && !wasGrounded) playLand();
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
     walkCycle = (walkCycle + 1) % WALK_CYCLE_FRAMES;
+    idleCycle = 0;
+  } else if (grounded) {
+    // Keep the dinosaur alive when idle with a subtle breathing/blink cycle.
+    idleCycle = (idleCycle + 1) % IDLE_CYCLE_FRAMES;
   }
 
   player.x = Math.max(0, Math.min(WORLD_WIDTH - player.width, player.x));
@@ -366,6 +374,7 @@ function draw() {
     dashActive: dashTimer > 0,
     grounded,
     walkCycle,
+    idleCycle,
     facing: player.facing,
     dashDirection,
     meatCollected,
@@ -384,6 +393,10 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+/**
+ * Requests fullscreen after the first pointer interaction.
+ * The listener is removed on success or failure to avoid repeated prompts.
+ */
 function requestFullscreenIfNeeded() {
   if (document.fullscreenElement) {
     window.removeEventListener('pointerdown', requestFullscreenIfNeeded);
