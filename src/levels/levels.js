@@ -90,6 +90,7 @@ function createObstacles(chapterIndex, levelInChapter, globalLevelIndex) {
 function createMapElements(chapterIndex, globalLevelIndex) {
   const boostCount = 1 + Math.floor(globalLevelIndex / 10);
   const movingPlatformCount = 1 + Math.floor(globalLevelIndex / 8);
+  const verticalPathCount = 3;
   const mapElements = [];
 
   for (let i = 0; i < boostCount; i += 1) {
@@ -114,6 +115,18 @@ function createMapElements(chapterIndex, globalLevelIndex) {
       axis: i % 2 === 0 ? 'x' : 'y',
       range: 26 + chapterIndex * 8 + i * 6,
       speed: 0.042 + globalLevelIndex * 0.001 + i * 0.008,
+    });
+  }
+
+  for (let i = 0; i < verticalPathCount; i += 1) {
+    const baseXByLane = [42, 292, 548];
+    const laneDrift = ((globalLevelIndex + i * 3) % 4) * 10 - 12;
+    mapElements.push({
+      type: 'verticalPath',
+      x: clamp(baseXByLane[i] + laneDrift, 16, 612),
+      y: clamp(66 + ((globalLevelIndex + i) % 3) * 12, 52, 132),
+      width: 12,
+      height: clamp(214 + chapterIndex * 10 + ((globalLevelIndex + i) % 3) * 8, 200, 260),
     });
   }
 

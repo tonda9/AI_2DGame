@@ -8,6 +8,13 @@ const ctx = canvas.getContext('2d');
 const input = new Input();
 const WORLD_WIDTH = 640;
 const WORLD_HEIGHT = 360;
+const BACKGROUND_MUSIC_VOLUME = 0.3;
+const BACKGROUND_MUSIC_SRC = './assets/audio/background.mp3';
+const CHAPTER_MUSIC = {
+  c1: BACKGROUND_MUSIC_SRC,
+  c2: BACKGROUND_MUSIC_SRC,
+  c3: BACKGROUND_MUSIC_SRC,
+};
 
 const player = {
   x: 120,
@@ -40,6 +47,9 @@ const WALK_CYCLE_FRAMES = 24;
 const IDLE_CYCLE_FRAMES = 120;
 const FALL_RESPAWN_THRESHOLD = 120;
 const BOOST_PAD_TRIGGER_OFFSET_PX = 2;
+const VERTICAL_PATH_GRAB_MARGIN_X = 6;
+const VERTICAL_PATH_CLIMB_SPEED = 1.9;
+const CLIMB_HORIZONTAL_SPEED_FACTOR = 0.55;
 const DEFAULT_BOOST_FORCE_Y = -10;
 const DEFAULT_BOOST_FORCE_X = 0;
 const SPIKE_HITBOX_INSET_X = 2;
@@ -58,7 +68,87 @@ let walkCycle = 0;
 let idleCycle = 0;
 let frameCount = 0;
 let meatCollected = 0;
+let climbing = false;
+let paused = false;
 const collectedMeatKeys = new Set();
+let backgroundMusic = null;
+let activeMusicPath = '';
+let isMusicPrimed = false;
+let shouldResumeMusicAfterVisibility = false;
+
+function resolveMusicSrcForLevel(levelId) {
+  const chapterKey = levelId?.split('-')[0];
+  return CHAPTER_MUSIC[chapterKey] || BACKGROUND_MUSIC_SRC;
+}
+
+function ensureBackgroundMusic() {
+  if (backgroundMusic) return backgroundMusic;
+  backgroundMusic = new Audio(BACKGROUND_MUSIC_SRC);
+  backgroundMusic.loop = true;
+  backgroundMusic.preload = 'metadata';
+  backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+  return backgroundMusic;
+}
+
+function stopBackgroundMusic() {
+  if (!backgroundMusic) return;
+  backgroundMusic.pause();
+  backgroundMusic.currentTime = 0;
+}
+
+function playBackgroundMusicForLevel(levelId) {
+  const music = ensureBackgroundMusic();
+  const nextSrc = resolveMusicSrcForLevel(levelId);
+  if (activeMusicPath !== nextSrc) {
+    activeMusicPath = nextSrc;
+    music.src = nextSrc;
+    music.load();
+  }
+  music.volume = BACKGROUND_MUSIC_VOLUME;
+  if (paused) return;
+  const maybePromise = music.play();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch((err) => {
+      // Autoplay can be blocked until first user gesture. Retry is handled by pointer/keydown listeners.
+      console.debug('Background music autoplay blocked:', err);
+    });
+  }
+}
+
+function pauseBackgroundMusic() {
+  if (!backgroundMusic) return;
+  backgroundMusic.pause();
+}
+
+function resumeBackgroundMusic() {
+  if (paused) return;
+  const music = ensureBackgroundMusic();
+  const maybePromise = music.play();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch((err) => console.debug('Background music resume blocked:', err));
+  }
+}
+
+function primeAudioIfNeeded() {
+  if (isMusicPrimed) return;
+  isMusicPrimed = true;
+  resumeBackgroundMusic();
+}
+
+function setPaused(nextPaused) {
+  paused = nextPaused;
+  if (paused) {
+    pauseBackgroundMusic();
+  } else {
+    resumeBackgroundMusic();
+  }
+}
+
+function performJump(verticalVelocity) {
+  player.vy = verticalVelocity;
+  jumpBufferTimer = 0;
+  playJump();
+}
 
 let levelIndex = 0;
 let level = createLevelState(LEVELS[0]);
@@ -130,19 +220,38 @@ function getSolidPlatforms() {
   return [...level.platforms, ...movingPlatforms];
 }
 
+function getVerticalPaths() {
+  return (level.mapElements || [])
+    .filter((mapElement) => mapElement.type === 'verticalPath')
+    .map(resolveEntityRect);
+}
+
+function getActiveVerticalPath() {
+  return getVerticalPaths().find((path) => (
+    player.x + player.width > path.x - VERTICAL_PATH_GRAB_MARGIN_X
+    && player.x < path.x + path.width + VERTICAL_PATH_GRAB_MARGIN_X
+    && player.y + player.height > path.y
+    && player.y < path.y + path.height
+  )) ?? null;
+}
+
 function resetPlayerToStart(wasKilled = false) {
+  // Restarting a level (death/manual switch) intentionally resets soundtrack timing for a clean retry feel.
+  stopBackgroundMusic();
   player.x = level.start.x;
   player.y = level.start.y;
   player.vx = 0;
   player.vy = 0;
   dashTimer = 0;
   canDash = true;
+  climbing = false;
   walkCycle = 0;
   idleCycle = 0;
   if (wasKilled) {
     screenShake = 14;
     playDeath();
   }
+  playBackgroundMusicForLevel(level.id);
 }
 
 function setLevel(index, fromGoal = false) {
@@ -241,17 +350,26 @@ function isTouchingWall(direction) {
 }
 
 function update() {
+  const pressPause = input.isPressed('pause');
+  if (pressPause) setPaused(!paused);
+  if (paused) return;
+
   frameCount += 1;
   if (screenShake > 0) screenShake = Math.max(0, screenShake - 1);
   updateDynamicEntities();
   const holdLeft = input.isDown('left');
   const holdRight = input.isDown('right');
+  const holdUp = input.isDown('up');
+  const holdDown = input.isDown('down');
   const holdJump = input.isDown('jump');
   const pressJump = input.isPressed('jump');
   const pressDash = input.isPressed('dash');
   const pressSwitchLevel = input.isPressed('switchLevel');
   const pressFullscreen = input.isPressed('fullscreen');
   const inputX = (holdRight ? 1 : 0) - (holdLeft ? 1 : 0);
+  const verticalInput = (holdDown ? 1 : 0) - (holdUp ? 1 : 0);
+  const activeVerticalPath = getActiveVerticalPath();
+  const climbingOnPath = Boolean(activeVerticalPath) && verticalInput !== 0;
 
   if (pressSwitchLevel) setLevel(levelIndex + 1);
 
@@ -271,23 +389,26 @@ function update() {
   const touchingLeftWall = isTouchingWall(-1);
   const touchingRightWall = isTouchingWall(1);
   const wallDirection = touchingLeftWall ? -1 : touchingRightWall ? 1 : 0;
-  const wallSliding = !grounded && player.vy > 0 && wallDirection !== 0
+  const wallSliding = !climbingOnPath && !grounded && player.vy > 0 && wallDirection !== 0
     && ((wallDirection === -1 && holdLeft) || (wallDirection === 1 && holdRight));
 
-  if (pressDash && canDash) {
+  if (pressDash && canDash && !climbingOnPath) {
     dashDirection = inputX || player.facing;
     dashTimer = dashFrames;
     canDash = false;
     playDash();
   }
 
-  if (dashTimer > 0) {
+  climbing = climbingOnPath;
+
+  if (dashTimer > 0 && !climbingOnPath) {
     dashTimer -= 1;
     player.vx = dashDirection * dashSpeed;
   } else {
+    if (climbingOnPath) dashTimer = 0;
     const acceleration = grounded ? runAccelGround : runAccelAir;
     const deceleration = grounded ? runDecelGround : runDecelAir;
-    const targetSpeed = inputX * maxRunSpeed;
+    const targetSpeed = inputX * (climbingOnPath ? maxRunSpeed * CLIMB_HORIZONTAL_SPEED_FACTOR : maxRunSpeed);
     player.vx = inputX !== 0
       ? approach(player.vx, targetSpeed, acceleration)
       : approach(player.vx, 0, deceleration);
@@ -295,35 +416,44 @@ function update() {
 
   if (jumpBufferTimer > 0) {
     if (wallSliding) {
-      player.vy = wallJumpVelocity;
+      performJump(wallJumpVelocity);
       player.vx = -wallDirection * wallJumpPush;
       player.facing = -wallDirection;
-      jumpBufferTimer = 0;
       coyoteTimer = 0;
-      playJump();
     } else if (coyoteTimer > 0) {
-      player.vy = jumpVelocity;
-      jumpBufferTimer = 0;
+      performJump(jumpVelocity);
       coyoteTimer = 0;
       grounded = false;
-      playJump();
+    } else if (activeVerticalPath) {
+      performJump(jumpVelocity);
+      climbing = false;
     }
   }
 
-  const jumpCutting = !holdJump && player.vy < 0;
-  const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
-  player.vy = Math.min(maxFallSpeed, player.vy + gravity);
-  if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
+  if (climbingOnPath) {
+    player.vy = verticalInput * VERTICAL_PATH_CLIMB_SPEED;
+  } else {
+    const jumpCutting = !holdJump && player.vy < 0;
+    const gravity = getGravityStrength(wallSliding, player.vy) + (jumpCutting ? jumpCutGravity : 0);
+    player.vy = Math.min(maxFallSpeed, player.vy + gravity);
+    if (wallSliding) player.vy = Math.min(player.vy, wallSlideFallSpeed);
+  }
 
   const previousY = player.y;
   movePlayerHorizontally(player.vx);
   player.y += player.vy;
 
+  if (activeVerticalPath && climbingOnPath) {
+    const minY = activeVerticalPath.y - player.height;
+    const maxY = activeVerticalPath.y + activeVerticalPath.height - player.height;
+    player.y = Math.max(minY, Math.min(maxY, player.y));
+  }
+
   wasGrounded = grounded;
-  const landed = resolveVerticalCollisions(previousY);
+  const landed = climbingOnPath ? false : resolveVerticalCollisions(previousY);
   if (landed) dashTimer = 0;
   applyMapElementInteractions(previousY);
-  grounded = landed || isOnGround();
+  grounded = !climbingOnPath && (landed || isOnGround());
   if (grounded) canDash = true;
   if (grounded && !wasGrounded) playLand();
   if (grounded && Math.abs(player.vx) > walkCycleVelocityThreshold) {
@@ -410,9 +540,21 @@ function requestFullscreenIfNeeded() {
     });
 }
 
+function handleVisibilityChange() {
+  if (document.hidden) {
+    shouldResumeMusicAfterVisibility = !paused;
+    pauseBackgroundMusic();
+  } else if (shouldResumeMusicAfterVisibility) {
+    resumeBackgroundMusic();
+  }
+}
+
 window.addEventListener('resize', resizeCanvas);
 document.addEventListener('fullscreenchange', resizeCanvas);
 window.addEventListener('pointerdown', requestFullscreenIfNeeded);
+window.addEventListener('pointerdown', primeAudioIfNeeded, { once: true });
+window.addEventListener('keydown', primeAudioIfNeeded, { once: true });
+document.addEventListener('visibilitychange', handleVisibilityChange);
 resizeCanvas();
 setLevel(0);
 requestAnimationFrame(frame);

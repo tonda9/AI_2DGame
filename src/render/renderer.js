@@ -176,6 +176,17 @@ function drawMapElement(ctx, mapElement, frameCount) {
   }
   if (mapElement.type === 'movingPlatform') {
     drawMovingPlatform(ctx, mapElement, frameCount);
+    return;
+  }
+  if (mapElement.type === 'verticalPath') {
+    const x = mapElement.currentX ?? mapElement.x;
+    const y = mapElement.currentY ?? mapElement.y;
+    drawPixelRect(ctx, x, y, mapElement.width, mapElement.height, '#3b3430');
+    drawPixelRect(ctx, x + 2, y, 2, mapElement.height, '#8a6b4c');
+    drawPixelRect(ctx, x + mapElement.width - 4, y, 2, mapElement.height, '#8a6b4c');
+    for (let rungY = y + 8; rungY < y + mapElement.height - 4; rungY += 12) {
+      drawPixelRect(ctx, x + 2, rungY, mapElement.width - 4, 2, '#bf9a74');
+    }
   }
 }
 
