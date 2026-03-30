@@ -75,6 +75,318 @@ const CHAPTER_LEVEL_PLANS = {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+/**
+ * Hand-crafted Chapter 1 level layouts.
+ * Each of the 10 levels introduces exactly one new mechanic on top of the
+ * previous ones so that the chapter forms a coherent teaching arc.
+ *
+ * World: 640 × 360.  Ground top-edge: y = 320.  Player height: 32 px.
+ */
+const CHAPTER_1_LAYOUTS = [
+  // ── Level 1 · Dash Warmup ────────────────────────────────────────────────
+  // Wide staircase, zero hazards.  Goal is reachable without a dash so the
+  // player can discover the mechanic at their own pace.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 585, y: 148, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 60, y: 278, width: 120, height: 14 },
+      { x: 220, y: 248, width: 100, height: 14 },
+      { x: 360, y: 218, width: 110, height: 14 },
+      { x: 490, y: 188, width: 130, height: 14 },
+    ],
+    obstacles: [],
+    collectibles: [
+      { x: 110, y: 260, width: 12, height: 12 },
+      { x: 255, y: 230, width: 12, height: 12 },
+      { x: 400, y: 200, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 2 · Corner Confidence ──────────────────────────────────────────
+  // Alternating short/medium ledges with bigger gaps.  Forces the player to
+  // commit to the jump before the ledge runs out; still no hazards.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 564, y: 126, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 80, y: 280, width: 70, height: 14 },
+      { x: 230, y: 254, width: 60, height: 14 },
+      { x: 370, y: 228, width: 70, height: 14 },
+      { x: 300, y: 196, width: 60, height: 14 },
+      { x: 480, y: 166, width: 110, height: 14 },
+    ],
+    obstacles: [],
+    collectibles: [
+      { x: 105, y: 262, width: 12, height: 12 },
+      { x: 250, y: 236, width: 12, height: 12 },
+      { x: 393, y: 210, width: 12, height: 12 },
+      { x: 528, y: 148, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 3 · Low-Risk Spikes ─────────────────────────────────────────────
+  // First static spikes appear on the ground between safe recovery platforms.
+  // Spacing rewards rhythm over pixel-perfect precision.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 590, y: 208, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 150, y: 278, width: 80, height: 14 },
+      { x: 340, y: 268, width: 80, height: 14 },
+      { x: 490, y: 248, width: 130, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 198, y: 304, width: 32, height: 16 },
+      { type: 'spike', x: 278, y: 304, width: 32, height: 16 },
+      { type: 'spike', x: 432, y: 304, width: 24, height: 16 },
+    ],
+    collectibles: [
+      { x: 182, y: 260, width: 12, height: 12 },
+      { x: 368, y: 250, width: 12, height: 12 },
+      { x: 540, y: 230, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 4 · Vertical Route A ────────────────────────────────────────────
+  // Introduces the climb-lane (verticalPath / ladder) as the primary way to
+  // gain height.  Spikes guard the ground on either side to nudge players
+  // toward the ladder.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 590, y: 128, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 50, y: 278, width: 100, height: 14 },
+      { x: 220, y: 252, width: 80, height: 14 },
+      { x: 360, y: 198, width: 100, height: 14 },
+      { x: 490, y: 168, width: 130, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 172, y: 304, width: 24, height: 16 },
+      { type: 'spike', x: 456, y: 304, width: 24, height: 16 },
+    ],
+    collectibles: [
+      { x: 82, y: 260, width: 12, height: 12 },
+      { x: 250, y: 234, width: 12, height: 12 },
+      { x: 395, y: 180, width: 12, height: 12 },
+      { x: 544, y: 150, width: 12, height: 12 },
+    ],
+    mapElements: [
+      { type: 'verticalPath', x: 138, y: 108, width: 12, height: 206 },
+    ],
+  },
+  // ── Level 5 · Dash Re-center ──────────────────────────────────────────────
+  // Split route: the left branch is a dead-end (spiked platform) and the
+  // right branch is the true path.  Teaches deliberate direction choices.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 590, y: 155, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 100, y: 280, width: 90, height: 14 },
+      { x: 0, y: 244, width: 78, height: 14 },
+      { x: 250, y: 258, width: 80, height: 14 },
+      { x: 380, y: 228, width: 80, height: 14 },
+      { x: 490, y: 195, width: 130, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 12, y: 228, width: 48, height: 16 },
+      { type: 'spike', x: 334, y: 304, width: 24, height: 16 },
+    ],
+    collectibles: [
+      { x: 128, y: 262, width: 12, height: 12 },
+      { x: 278, y: 240, width: 12, height: 12 },
+      { x: 406, y: 210, width: 12, height: 12 },
+      { x: 544, y: 177, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 6 · Moving Threat Intro ─────────────────────────────────────────
+  // One slow-drifting spike appears above a wide platform — a non-lethal
+  // training spot that makes the rhythm readable before the threat is real.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 588, y: 154, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 80, y: 278, width: 100, height: 14 },
+      { x: 240, y: 254, width: 90, height: 14 },
+      { x: 390, y: 228, width: 90, height: 14 },
+      { x: 500, y: 194, width: 120, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 162, y: 304, width: 32, height: 16 },
+      {
+        type: 'movingSpike',
+        x: 270, y: 228, width: 24, height: 16,
+        axis: 'x', range: 38, speed: 0.038,
+      },
+    ],
+    collectibles: [
+      { x: 117, y: 260, width: 12, height: 12 },
+      { x: 271, y: 236, width: 12, height: 12 },
+      { x: 422, y: 210, width: 12, height: 12 },
+      { x: 548, y: 176, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 7 · Secret Detour ───────────────────────────────────────────────
+  // The mainline ascent is straightforward.  A hidden platform in the top-
+  // left corner — reachable only via the left ladder — holds a secret collectible.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 590, y: 145, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 100, y: 278, width: 90, height: 14 },
+      { x: 240, y: 248, width: 90, height: 14 },
+      { x: 380, y: 218, width: 90, height: 14 },
+      { x: 490, y: 185, width: 130, height: 14 },
+      { x: 10, y: 130, width: 72, height: 12, hidden: true },
+    ],
+    obstacles: [
+      { type: 'spike', x: 182, y: 304, width: 32, height: 16 },
+      {
+        type: 'movingSpike',
+        x: 330, y: 196, width: 24, height: 16,
+        axis: 'x', range: 36, speed: 0.044,
+      },
+    ],
+    collectibles: [
+      { x: 130, y: 260, width: 12, height: 12 },
+      { x: 270, y: 230, width: 12, height: 12 },
+      { x: 410, y: 200, width: 12, height: 12 },
+      { x: 548, y: 167, width: 12, height: 12 },
+      { x: 38, y: 114, width: 12, height: 12, secret: true },
+    ],
+    mapElements: [
+      { type: 'verticalPath', x: 30, y: 138, width: 12, height: 176 },
+    ],
+  },
+  // ── Level 8 · Ledge Weave ─────────────────────────────────────────────────
+  // Dense weave of medium platforms and spike guards.  Demands two back-to-back
+  // dash commitments with no safe floor reset between them.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 599, y: 150, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 78, y: 280, width: 70, height: 14 },
+      { x: 206, y: 258, width: 60, height: 14 },
+      { x: 318, y: 236, width: 65, height: 14 },
+      { x: 438, y: 214, width: 65, height: 14 },
+      { x: 540, y: 190, width: 90, height: 14 },
+      { x: 148, y: 226, width: 48, height: 14 },
+      { x: 272, y: 204, width: 48, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 164, y: 304, width: 24, height: 16 },
+      { type: 'spike', x: 356, y: 220, width: 24, height: 16 },
+      { type: 'spike', x: 464, y: 198, width: 24, height: 16 },
+    ],
+    collectibles: [
+      { x: 103, y: 262, width: 12, height: 12 },
+      { x: 226, y: 240, width: 12, height: 12 },
+      { x: 338, y: 218, width: 12, height: 12 },
+      { x: 456, y: 196, width: 12, height: 12 },
+      { x: 572, y: 172, width: 12, height: 12 },
+    ],
+    mapElements: [],
+  },
+  // ── Level 9 · Launch Bridge ───────────────────────────────────────────────
+  // A wide spike pit splits the ground; the boost pad on the starting platform
+  // is the only way across.  Teaches the boost pad as a required route element.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 594, y: 124, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 200, height: 40 },
+      { x: 450, y: 320, width: 190, height: 40 },
+      { x: 80, y: 278, width: 80, height: 14 },
+      { x: 490, y: 200, width: 130, height: 14 },
+      { x: 514, y: 164, width: 106, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 218, y: 304, width: 32, height: 16 },
+      { type: 'spike', x: 276, y: 304, width: 32, height: 16 },
+      { type: 'spike', x: 376, y: 304, width: 32, height: 16 },
+      {
+        type: 'movingSpike',
+        x: 502, y: 172, width: 24, height: 16,
+        axis: 'x', range: 28, speed: 0.048,
+      },
+    ],
+    collectibles: [
+      { x: 100, y: 260, width: 12, height: 12 },
+      { x: 506, y: 182, width: 12, height: 12 },
+      { x: 534, y: 146, width: 12, height: 12 },
+      { x: 573, y: 146, width: 12, height: 12 },
+    ],
+    mapElements: [
+      {
+        type: 'boostPad',
+        x: 116, y: 270, width: 28, height: 8,
+        forceY: -11.5, forceX: 3.0,
+      },
+    ],
+  },
+  // ── Level 10 · Chapter 1 Exam ─────────────────────────────────────────────
+  // Long multi-tier ascent that combines every Chapter 1 mechanic: static
+  // spikes, moving spikes, a ladder, a boost pad, and a moving platform.
+  {
+    start: { x: 22, y: 276 },
+    end: { x: 590, y: 88, width: 16, height: 40 },
+    platforms: [
+      { x: 0, y: 320, width: 640, height: 40 },
+      { x: 60, y: 280, width: 80, height: 14 },
+      { x: 190, y: 258, width: 70, height: 14 },
+      { x: 290, y: 236, width: 70, height: 14 },
+      { x: 378, y: 214, width: 60, height: 14 },
+      { x: 460, y: 192, width: 70, height: 14 },
+      { x: 356, y: 155, width: 80, height: 14 },
+      { x: 490, y: 128, width: 130, height: 14 },
+    ],
+    obstacles: [
+      { type: 'spike', x: 152, y: 304, width: 24, height: 16 },
+      { type: 'spike', x: 338, y: 220, width: 24, height: 16 },
+      {
+        type: 'movingSpike',
+        x: 310, y: 196, width: 24, height: 16,
+        axis: 'x', range: 32, speed: 0.048,
+      },
+      {
+        type: 'movingSpike',
+        x: 430, y: 170, width: 24, height: 16,
+        axis: 'y', range: 24, speed: 0.058,
+      },
+    ],
+    collectibles: [
+      { x: 84, y: 262, width: 12, height: 12 },
+      { x: 213, y: 240, width: 12, height: 12 },
+      { x: 308, y: 218, width: 12, height: 12 },
+      { x: 473, y: 174, width: 12, height: 12 },
+      { x: 540, y: 110, width: 12, height: 12 },
+    ],
+    mapElements: [
+      { type: 'verticalPath', x: 446, y: 100, width: 12, height: 188 },
+      {
+        type: 'boostPad',
+        x: 68, y: 292, width: 24, height: 8,
+        forceY: -10.5, forceX: 1.5,
+      },
+      {
+        type: 'movingPlatform',
+        x: 268, y: 168, width: 64, height: 12,
+        axis: 'x', range: 34, speed: 0.038,
+      },
+    ],
+  },
+];
+
 function createBasePlatforms(globalLevelIndex) {
   const layoutType = globalLevelIndex % 3;
   const steps = 4 + Math.floor(globalLevelIndex / 4);
@@ -216,6 +528,32 @@ function findTopmostPlatform(platforms) {
 function createLevel(chapter, chapterIndex, levelInChapter) {
   const globalLevelIndex = chapterIndex * 10 + levelInChapter - 1;
   const designPlan = CHAPTER_LEVEL_PLANS[chapter.chapter][levelInChapter - 1];
+
+  // Chapter 1 uses hand-crafted layouts so each level has a distinct,
+  // progressively harder design.  All other chapters stay procedural.
+  if (chapter.chapter === 1) {
+    const layout = CHAPTER_1_LAYOUTS[levelInChapter - 1];
+    return {
+      id: `c1-l${levelInChapter}`,
+      chapter: 1,
+      chapterLevel: levelInChapter,
+      backgroundVariant: chapter.backgroundCycle[(levelInChapter - 1) % chapter.backgroundCycle.length],
+      conceptName: designPlan.conceptName,
+      coreMechanicUsed: designPlan.coreMechanicUsed,
+      layoutDescription: designPlan.layoutDescription,
+      newIdeaIntroduced: designPlan.newIdeaIntroduced,
+      difficulty: designPlan.difficulty,
+      chapterCoreMechanic: chapter.coreMechanic,
+      chapterVisualTheme: chapter.visualTheme,
+      start: layout.start,
+      end: layout.end,
+      platforms: layout.platforms,
+      obstacles: layout.obstacles,
+      collectibles: layout.collectibles,
+      mapElements: layout.mapElements,
+    };
+  }
+
   const platforms = createBasePlatforms(globalLevelIndex);
   const hasSecret = SECRET_LEVEL_KEYS.has(`${chapter.chapter}-${levelInChapter}`);
   const collectibles = createCollectibles(platforms, chapterIndex, globalLevelIndex, hasSecret);
